@@ -1,0 +1,13 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://csm01d86h6egu"
+valid=false
+
+[deps]
+
+source_file="res://tests/python_build/fixtures/glsl/_included.glsl"
+
+[params]
+

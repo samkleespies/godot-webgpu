@@ -1,0 +1,13 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://dguqgkfbimphv"
+valid=false
+
+[deps]
+
+source_file="res://servers/rendering/renderer_rd/shaders/effects/fsr2/fsr2_rcas_pass.glsl"
+
+[params]
+

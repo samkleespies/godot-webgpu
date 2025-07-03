@@ -64,6 +64,14 @@ sys_env.AddJSPost(
 if env["javascript_eval"]:
     sys_env.AddJSLibraries(["js/libs/library_godot_javascript_singleton.js"])
 
+if env.get("webgpu", False):
+    # WebGPU device creation before main() starts (run-dependency approach)
+    sys_env.AddJSPre(["js/pre_wgpu.js"])
+
+    # Main WebGPU runtime helpers (linked as a normal JS library)
+    sys_env.AddJSLibraries(["js/libs/library_godot_webgpu.js"])
+    # Removed callback function exports - using synchronous pre-JS device creation instead
+
 for lib in sys_env["JS_LIBS"]:
     sys_env.Append(LINKFLAGS=["--js-library", lib.abspath])
 for js in sys_env["JS_PRE"]:

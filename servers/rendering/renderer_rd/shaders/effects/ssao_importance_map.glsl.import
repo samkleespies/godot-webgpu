@@ -1,0 +1,13 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://4dlw5x1yjiur"
+valid=false
+
+[deps]
+
+source_file="res://servers/rendering/renderer_rd/shaders/effects/ssao_importance_map.glsl"
+
+[params]
+

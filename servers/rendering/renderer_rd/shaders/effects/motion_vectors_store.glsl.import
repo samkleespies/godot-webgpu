@@ -1,0 +1,13 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://bbsekoqrcje3n"
+valid=false
+
+[deps]
+
+source_file="res://servers/rendering/renderer_rd/shaders/effects/motion_vectors_store.glsl"
+
+[params]
+

@@ -1,0 +1,13 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://cqb3lgppp6c4d"
+valid=false
+
+[deps]
+
+source_file="res://modules/betsy/bc6h.glsl"
+
+[params]
+

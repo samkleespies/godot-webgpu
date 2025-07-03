@@ -1,0 +1,13 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://d1l2p7f6u06m4"
+valid=false
+
+[deps]
+
+source_file="res://servers/rendering/renderer_rd/shaders/half_inc.glsl"
+
+[params]
+

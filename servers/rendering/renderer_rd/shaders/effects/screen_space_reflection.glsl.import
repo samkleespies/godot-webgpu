@@ -1,0 +1,13 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://flanqfh0pfl5"
+valid=false
+
+[deps]
+
+source_file="res://servers/rendering/renderer_rd/shaders/effects/screen_space_reflection.glsl"
+
+[params]
+

@@ -1,0 +1,37 @@
+#!/usr/bin/env python
+from misc.utility.scons_hints import *
+
+Import("env")
+
+# Only build WebGPU driver if enabled
+if env["webgpu"]:
+    env_webgpu = env.Clone()
+
+    # Define WebGPU enabled
+    env_webgpu.Append(CPPDEFINES=["WEBGPU_ENABLED"])
+
+    # Platform-specific WebGPU setup
+    if env["platform"] == "web":
+        # For Emscripten/Web builds - use Emscripten's WebGPU headers
+        env_webgpu.Append(CPPDEFINES=["__EMSCRIPTEN__"])
+
+        # WebGPU functions are exported via platform/web/SCsub
+        # No need for manual EXPORTED_FUNCTIONS here
+
+        # Note: For Emscripten builds, we don't use Dawn/Tint directly
+        # Emscripten provides its own WebGPU implementation
+        # SPIR-V to WGSL conversion will use fallback stub shaders for now
+
+        print("[OK] Building WebGPU driver for Web platform (using Emscripten WebGPU)")
+    else:
+        # For native builds, we'd need Dawn or wgpu-native
+        # For now, disable native builds to focus on web
+        print("[ERROR] WebGPU driver currently only supports web platform")
+        Return()
+
+    # Add WebGPU source files
+    env_webgpu.add_source_files(env.drivers_sources, "*.cpp")
+
+    print("[OK] WebGPU driver enabled and configured")
+else:
+    print("[WARNING] WebGPU driver disabled (use webgpu=yes to enable)")

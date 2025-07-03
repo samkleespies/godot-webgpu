@@ -1,0 +1,13 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://ciq8n1fqdjjrs"
+valid=false
+
+[deps]
+
+source_file="res://drivers/gles3/shaders/cube_to_dp.glsl"
+
+[params]
+

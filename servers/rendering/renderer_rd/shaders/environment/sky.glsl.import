@@ -1,0 +1,13 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://8l1bk3i3w48f"
+valid=false
+
+[deps]
+
+source_file="res://servers/rendering/renderer_rd/shaders/environment/sky.glsl"
+
+[params]
+

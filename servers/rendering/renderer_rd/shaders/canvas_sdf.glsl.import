@@ -1,0 +1,13 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://bn463lqmudbv4"
+valid=false
+
+[deps]
+
+source_file="res://servers/rendering/renderer_rd/shaders/canvas_sdf.glsl"
+
+[params]
+

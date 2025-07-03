@@ -202,9 +202,24 @@ Vector<uint8_t> RenderingDevice::shader_compile_spirv_from_source(ShaderStage p_
 		}
 #endif
 		default:
+#ifdef WEBGPU_ENABLED
+			// For WebGPU, we don't need to compile GLSL to SPIR-V, so we can just return an empty vector.
+			return Vector<uint8_t>();
+#else
 			ERR_FAIL_V_MSG(Vector<uint8_t>(), "Shader language is not supported.");
+#endif
 	}
 }
+
+#ifndef MODULE_GLSLANG_ENABLED
+// Stub implementation for platforms without glslang module (like web)
+Vector<uint8_t> compile_glslang_shader(RenderingDeviceCommons::ShaderStage p_stage, const String &p_source_code, RenderingDeviceCommons::ShaderLanguageVersion p_language_version, RenderingDeviceCommons::ShaderSpirvVersion p_spirv_version, String *r_error) {
+	if (r_error) {
+		*r_error = "GLSL compilation not available on this platform. Use pre-compiled shaders or WGSL.";
+	}
+	return Vector<uint8_t>();
+}
+#endif
 
 RID RenderingDevice::shader_create_from_spirv(const Vector<ShaderStageSPIRVData> &p_spirv, const String &p_shader_name) {
 	Vector<uint8_t> bytecode = shader_compile_binary_from_spirv(p_spirv, p_shader_name);

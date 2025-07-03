@@ -1,0 +1,13 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://dof11snk67ecj"
+valid=false
+
+[deps]
+
+source_file="res://modules/betsy/bc4.glsl"
+
+[params]
+

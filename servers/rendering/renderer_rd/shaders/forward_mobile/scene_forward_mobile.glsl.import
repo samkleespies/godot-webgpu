@@ -1,0 +1,13 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://brjo7emkuw6f4"
+valid=false
+
+[deps]
+
+source_file="res://servers/rendering/renderer_rd/shaders/forward_mobile/scene_forward_mobile.glsl"
+
+[params]
+

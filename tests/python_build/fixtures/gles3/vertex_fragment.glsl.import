@@ -1,0 +1,13 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://diqgm3vxkks1n"
+valid=false
+
+[deps]
+
+source_file="res://tests/python_build/fixtures/gles3/vertex_fragment.glsl"
+
+[params]
+

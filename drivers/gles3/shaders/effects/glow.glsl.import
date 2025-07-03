@@ -1,0 +1,13 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://d3y5w0kv8rq7n"
+valid=false
+
+[deps]
+
+source_file="res://drivers/gles3/shaders/effects/glow.glsl"
+
+[params]
+

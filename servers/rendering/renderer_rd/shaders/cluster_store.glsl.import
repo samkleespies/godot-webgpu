@@ -1,0 +1,13 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://bujlf13v3srwc"
+valid=false
+
+[deps]
+
+source_file="res://servers/rendering/renderer_rd/shaders/cluster_store.glsl"
+
+[params]
+

@@ -1,0 +1,13 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://dxy34mco2aapg"
+valid=false
+
+[deps]
+
+source_file="res://servers/rendering/renderer_rd/shaders/environment/volumetric_fog.glsl"
+
+[params]
+

@@ -1,0 +1,13 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://dhqw7sfgt5v5n"
+valid=false
+
+[deps]
+
+source_file="res://servers/rendering/renderer_rd/shaders/forward_clustered/scene_forward_clustered_inc.glsl"
+
+[params]
+

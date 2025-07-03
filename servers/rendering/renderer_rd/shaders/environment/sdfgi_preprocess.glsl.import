@@ -1,0 +1,13 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://d2ocu55pq1dep"
+valid=false
+
+[deps]
+
+source_file="res://servers/rendering/renderer_rd/shaders/environment/sdfgi_preprocess.glsl"
+
+[params]
+

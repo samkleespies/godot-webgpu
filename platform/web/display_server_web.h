@@ -58,6 +58,11 @@ private:
 	EMSCRIPTEN_WEBGL_CONTEXT_HANDLE webgl_ctx = 0;
 #endif
 
+#ifdef WEBGPU_ENABLED
+	class RenderingContextDriverWebGPU *rendering_context = nullptr;
+	class RenderingDevice *rendering_device = nullptr;
+#endif
+
 	HashMap<int, CharString> utterance_ids;
 
 	WindowMode window_mode = WINDOW_MODE_WINDOWED;

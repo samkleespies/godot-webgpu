@@ -1,0 +1,13 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://du7uqnj52asq5"
+valid=false
+
+[deps]
+
+source_file="res://servers/rendering/renderer_rd/shaders/decal_data_inc.glsl"
+
+[params]
+

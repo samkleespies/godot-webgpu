@@ -1752,4 +1752,7 @@ VARIANT_ENUM_CAST(RenderingDevice::InitialAction)
 VARIANT_ENUM_CAST(RenderingDevice::FinalAction)
 #endif
 
+// Forward declaration for compile_glslang_shader function
+Vector<uint8_t> compile_glslang_shader(RenderingDeviceCommons::ShaderStage p_stage, const String &p_source_code, RenderingDeviceCommons::ShaderLanguageVersion p_language_version, RenderingDeviceCommons::ShaderSpirvVersion p_spirv_version, String *r_error);
+
 typedef RenderingDevice RD;

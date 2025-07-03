@@ -1,0 +1,13 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://oic7x7ylukd5"
+valid=false
+
+[deps]
+
+source_file="res://thirdparty/amd-fsr2/shaders/ffx_fsr2_reconstruct_previous_depth_pass.glsl"
+
+[params]
+

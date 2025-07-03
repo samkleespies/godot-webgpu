@@ -1,0 +1,13 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://k26g10r7ryxp"
+valid=false
+
+[deps]
+
+source_file="res://thirdparty/amd-fsr2/shaders/ffx_fsr2_tcr_autogen_pass.glsl"
+
+[params]
+

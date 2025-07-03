@@ -60,6 +60,7 @@ def get_opts():
             False,
         ),
         BoolVariable("wasm_simd", "Use WebAssembly SIMD to improve CPU performance", True),
+        BoolVariable("webgpu", "Enable WebGPU rendering backend", False),
     ]
 
 
@@ -79,6 +80,7 @@ def get_flags():
         "target": "template_debug",
         "builtin_pcre2_with_jit": False,
         "vulkan": False,
+        "webgpu": False,  # WebGPU support for web platform
         # Embree is heavy and requires too much memory (GH-70621).
         "module_raycast_enabled": False,
         # Use -Os to prioritize optimizing for reduced file size. This is
@@ -109,6 +111,10 @@ def configure(env: "SConsEnvironment"):
     # Validate arch.
     supported_arches = ["wasm32"]
     validate_arch(env["arch"], get_name(), supported_arches)
+
+    # Set supported drivers for web platform
+    supported = ["webgpu"] if env["webgpu"] else []
+    env["supported"] = supported
 
     try:
         env["initial_memory"] = int(env["initial_memory"])
@@ -245,6 +251,18 @@ def configure(env: "SConsEnvironment"):
         # See https://emscripten.org/docs/tools_reference/settings_reference.html#gl-enable-get-proc-address
         env.Append(LINKFLAGS=["-sGL_ENABLE_GET_PROC_ADDRESS=0"])
 
+    if env["webgpu"]:
+        env.AppendUnique(CPPDEFINES=["WEBGPU_ENABLED"])
+        # Enable WebGPU support using the newer Dawn-based implementation
+        env.Append(LINKFLAGS=["--use-port=emdawnwebgpu"])
+        print("[OK] WebGPU enabled for web platform (using Dawn)")
+
+    # Disable modules that don't work with web platform
+    env["module_camera_enabled"] = False
+    env["module_glslang_enabled"] = False
+    env["module_openxr_enabled"] = False
+    env["module_raycast_enabled"] = False
+
     if env["javascript_eval"]:
         env.Append(CPPDEFINES=["JAVASCRIPT_EVAL_ENABLED"])
 
@@ -310,6 +328,8 @@ def configure(env: "SConsEnvironment"):
     # Allow increasing memory buffer size during runtime. This is efficient
     # when using WebAssembly (in comparison to asm.js) and works well for
     # us since we don't know requirements at compile-time.
+    # Note: This causes a warning when combined with threading (-pthread) but is
+    # necessary for WebGPU and other dynamic memory requirements.
     env.Append(LINKFLAGS=["-sALLOW_MEMORY_GROWTH=1"])
 
     # Do not call main immediately when the support code is ready.

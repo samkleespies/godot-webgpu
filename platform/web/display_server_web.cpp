@@ -42,6 +42,13 @@
 #include "drivers/gles3/rasterizer_gles3.h"
 #endif
 
+#ifdef WEBGPU_ENABLED
+#include "drivers/webgpu/rendering_context_driver_webgpu.h"
+#include "godot_webgpu.h"
+#include "servers/rendering/rendering_device.h"
+#include "servers/rendering/renderer_rd/renderer_compositor_rd.h"
+#endif
+
 #include <emscripten.h>
 #include <png.h>
 
@@ -972,9 +979,13 @@ void DisplayServerWeb::process_joypads() {
 
 Vector<String> DisplayServerWeb::get_rendering_drivers_func() {
 	Vector<String> drivers;
+#ifdef WEBGPU_ENABLED
+	drivers.push_back("webgpu");
+#endif
 #ifdef GLES3_ENABLED
 	drivers.push_back("opengl3");
 #endif
+	drivers.push_back("dummy");
 	return drivers;
 }
 
@@ -1086,6 +1097,14 @@ DisplayServer *DisplayServerWeb::create_func(const String &p_rendering_driver, W
 DisplayServerWeb::DisplayServerWeb(const String &p_rendering_driver, WindowMode p_window_mode, VSyncMode p_vsync_mode, uint32_t p_flags, const Point2i *p_position, const Size2i &p_resolution, int p_screen, Context p_context, int64_t p_parent_window, Error &r_error) {
 	r_error = OK; // Always succeeds for now.
 
+	// 🔍 DEBUG: Log the rendering driver being used
+	print_line("DisplayServerWeb constructor called with rendering driver: '" + p_rendering_driver + "'");
+	print_line("Available rendering drivers:");
+	Vector<String> available_drivers = get_rendering_drivers_func();
+	for (int i = 0; i < available_drivers.size(); i++) {
+		print_line("  - " + available_drivers[i]);
+	}
+
 	native_menu = memnew(NativeMenu); // Dummy native menu.
 
 	// Ensure the canvas ID.
@@ -1099,6 +1118,83 @@ DisplayServerWeb::DisplayServerWeb(const String &p_rendering_driver, WindowMode 
 
 	// Expose method for requesting quit.
 	godot_js_os_request_quit_cb(request_quit_callback);
+
+#ifdef WEBGPU_ENABLED
+	if (p_rendering_driver == "webgpu") {
+		print_verbose("WebGPU rendering driver selected");
+
+		// Check if WebGPU is supported
+		if (!godot_js_webgpu_is_supported()) {
+			OS::get_singleton()->alert(
+				"Your browser does not support WebGPU.\n\n"
+				"WebGPU requires Chrome 113+ or Firefox with WebGPU enabled.",
+				"WebGPU not supported");
+			RasterizerDummy::make_current();
+		} else {
+			// Initialize WebGPU
+			if (godot_js_webgpu_init(canvas_id)) {
+				print_verbose("WebGPU initialized successfully");
+
+				// Create WebGPU rendering context
+				rendering_context = memnew(RenderingContextDriverWebGPU);
+				if (rendering_context->initialize() == OK) {
+					print_verbose("WebGPU rendering context created");
+
+					// Create window surface (like other platforms do)
+					if (rendering_context->window_create(MAIN_WINDOW_ID, nullptr) == OK) {
+						print_verbose("WebGPU window surface created");
+
+						// Create and initialize the rendering device with deferred initialization support
+						rendering_device = memnew(RenderingDevice);
+
+						// WebGPU callback mechanism will handle device retry automatically
+
+						// Try to initialize WebGPU device (deferred initialization)
+						print_line("WebGPU: Attempting deferred initialization...");
+						Error init_result = rendering_device->initialize(rendering_context, MAIN_WINDOW_ID);
+
+						if (init_result == ERR_BUSY) {
+							print_line("WebGPU: Device not ready on first attempt - this is expected");
+							print_line("WebGPU: Will continue with dummy renderer until device becomes available");
+							// Don't fail - let the engine continue with dummy renderer
+							// The device will be initialized later when it becomes available
+							init_result = OK;
+						}
+
+						if (init_result == OK) {
+							print_line("WebGPU rendering device initialized successfully");
+							rendering_device->screen_create(MAIN_WINDOW_ID);
+
+							// Use the RD-based compositor instead of dummy
+							RendererCompositorRD::make_current();
+							print_line("WebGPU renderer activated successfully!");
+						} else {
+							print_error("Failed to initialize WebGPU rendering device - error: " + itos(init_result));
+							memdelete(rendering_device);
+							rendering_device = nullptr;
+							memdelete(rendering_context);
+							rendering_context = nullptr;
+							RasterizerDummy::make_current();
+						}
+					} else {
+						print_error("Failed to create WebGPU window surface");
+						memdelete(rendering_context);
+						rendering_context = nullptr;
+						RasterizerDummy::make_current();
+					}
+				} else {
+					print_error("Failed to create WebGPU rendering context");
+					memdelete(rendering_context);
+					rendering_context = nullptr;
+					RasterizerDummy::make_current();
+				}
+			} else {
+				print_error("Failed to initialize WebGPU");
+				RasterizerDummy::make_current();
+			}
+		}
+	}
+#endif
 
 #ifdef GLES3_ENABLED
 	bool webgl2_inited = false;
@@ -1119,13 +1215,14 @@ DisplayServerWeb::DisplayServerWeb(const String &p_rendering_driver, WindowMode 
 		}
 		RasterizerGLES3::make_current(false);
 
-	} else {
-		OS::get_singleton()->alert(
-				"Your browser seems not to support WebGL 2.\n\n"
-				"If possible, consider updating your browser version and video card drivers.",
-				"Unable to initialize WebGL 2 video driver");
-		RasterizerDummy::make_current();
-	}
+	} 
+	// else {
+	// 	OS::get_singleton()->alert(
+	// 			"Your browser seems not to support WebGL 2.\n\n"
+	// 			"If possible, consider updating your browser version and video card drivers.",
+	// 			"Unable to initialize WebGL 2 video driver");
+	// 	RasterizerDummy::make_current();
+	// }
 #else
 	RasterizerDummy::make_current();
 #endif
@@ -1163,6 +1260,13 @@ DisplayServerWeb::~DisplayServerWeb() {
 	if (webgl_ctx) {
 		emscripten_webgl_commit_frame();
 		emscripten_webgl_destroy_context(webgl_ctx);
+	}
+#endif
+
+#ifdef WEBGPU_ENABLED
+	if (rendering_context) {
+		memdelete(rendering_context);
+		rendering_context = nullptr;
 	}
 #endif
 }

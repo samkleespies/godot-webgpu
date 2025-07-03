@@ -1,0 +1,13 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://dwpvs4l3cqkq4"
+valid=false
+
+[deps]
+
+source_file="res://servers/rendering/renderer_rd/shaders/particles_copy.glsl"
+
+[params]
+

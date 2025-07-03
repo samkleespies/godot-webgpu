@@ -1,0 +1,13 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://by620d33fnbs3"
+valid=false
+
+[deps]
+
+source_file="res://drivers/gles3/shaders/effects/cubemap_filter.glsl"
+
+[params]
+

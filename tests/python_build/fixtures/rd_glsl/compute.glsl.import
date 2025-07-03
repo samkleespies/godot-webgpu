@@ -1,0 +1,13 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://bqk3y2u2wrmkr"
+valid=false
+
+[deps]
+
+source_file="res://tests/python_build/fixtures/rd_glsl/compute.glsl"
+
+[params]
+

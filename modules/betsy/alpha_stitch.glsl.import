@@ -1,0 +1,13 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://cm5y7lrmkgh6x"
+valid=false
+
+[deps]
+
+source_file="res://modules/betsy/alpha_stitch.glsl"
+
+[params]
+

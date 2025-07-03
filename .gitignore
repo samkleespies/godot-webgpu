@@ -99,7 +99,17 @@ platform/android/java/*/libs/
 
 # Web platform
 *.bc
+*.wasm
+*.js.map
 platform/web/node_modules/
+
+# WebGPU test project exports
+test_project/build/
+test_project/.godot/
+test_project/.import/
+
+# Console logs and debug files
+console.txt
 
 # Misc
 *.debug
