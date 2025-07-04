@@ -30,6 +30,10 @@
 
 #include "renderer_canvas_render_rd.h"
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten/console.h>
+#endif
+
 #include "core/config/project_settings.h"
 #include "core/math/geometry_2d.h"
 #include "core/math/math_defs.h"
@@ -1631,12 +1635,32 @@ Pair<ShaderRD *, RID> RendererCanvasRenderRD::CanvasShaderData::get_native_shade
 }
 
 RID RendererCanvasRenderRD::CanvasShaderData::get_shader(ShaderVariant p_shader_variant, bool p_ubershader) const {
+#ifdef __EMSCRIPTEN__
+	emscripten_console_log("🔧 CANVAS SHADER: get_shader called");
+#endif
+	printf("🔧 CANVAS SHADER: get_shader called with variant: %d, ubershader: %s\n", p_shader_variant, p_ubershader ? "true" : "false");
+	printf("🔧 CANVAS SHADER: version.is_valid(): %s\n", version.is_valid() ? "true" : "false");
+
 	if (version.is_valid()) {
 		uint32_t variant_index = p_shader_variant + (p_ubershader ? SHADER_VARIANT_MAX : 0);
+#ifdef __EMSCRIPTEN__
+		emscripten_console_log("🔧 CANVAS SHADER: Getting shader for variant_index");
+#endif
+		printf("🔧 CANVAS SHADER: Getting shader for variant_index: %d\n", variant_index);
 		RendererCanvasRenderRD *canvas_singleton = static_cast<RendererCanvasRenderRD *>(RendererCanvasRender::singleton);
 		MutexLock lock(canvas_singleton->shader.mutex);
-		return canvas_singleton->shader.canvas_shader.version_get_shader(version, variant_index);
+		RID result = canvas_singleton->shader.canvas_shader.version_get_shader(version, variant_index);
+#ifdef __EMSCRIPTEN__
+		emscripten_console_log(result.is_valid() ? "🔧 CANVAS SHADER: version_get_shader returned: VALID RID" : "🔧 CANVAS SHADER: version_get_shader returned: INVALID RID");
+#endif
+		printf("🔧 CANVAS SHADER: version_get_shader returned: %s\n", result.is_valid() ? "VALID RID" : "INVALID RID");
+		return result;
 	} else {
+#ifdef __EMSCRIPTEN__
+		emscripten_console_log("🔧 CANVAS SHADER ERROR: version is invalid, returning null RID");
+#endif
+		printf("🔧 CANVAS SHADER ERROR: version is invalid, returning null RID\n");
+		print_error("🔧 CANVAS SHADER ERROR: version is invalid, returning null RID");
 		return RID();
 	}
 }
@@ -1716,6 +1740,13 @@ void RendererCanvasRenderRD::update() {
 }
 
 RendererCanvasRenderRD::RendererCanvasRenderRD() {
+	// Use multiple logging methods for early logging that works before Godot's logging system is ready
+#ifdef __EMSCRIPTEN__
+	emscripten_console_log("🔧🔧🔧 CANVAS CONSTRUCTOR: RendererCanvasRenderRD constructor starting 🔧🔧🔧");
+#endif
+	printf("🔧🔧🔧 CANVAS CONSTRUCTOR: RendererCanvasRenderRD constructor starting 🔧🔧🔧\n");
+	print_error("🔧🔧🔧 CANVAS CONSTRUCTOR: RendererCanvasRenderRD constructor starting 🔧🔧🔧");
+	print_line("🔧🔧🔧 CANVAS CONSTRUCTOR: RendererCanvasRenderRD constructor starting 🔧🔧🔧");
 	RendererRD::TextureStorage *texture_storage = RendererRD::TextureStorage::get_singleton();
 	RendererRD::MaterialStorage *material_storage = RendererRD::MaterialStorage::get_singleton();
 
@@ -1747,12 +1778,41 @@ RendererCanvasRenderRD::RendererCanvasRenderRD() {
 			variants.push_back(base_define + "#define USE_ATTRIBUTES\n#define USE_POINT_SIZE\n"); // SHADER_VARIANT_ATTRIBUTES_POINTS
 		}
 
+		// Use multiple logging methods for early logging that works before Godot's logging system is ready
+#ifdef __EMSCRIPTEN__
+		emscripten_console_log("🔧 CANVAS SHADER: Initializing canvas shader");
+#endif
+		printf("🔧 CANVAS SHADER: Initializing canvas shader with %d variants\n", (int)variants.size());
 		shader.canvas_shader.initialize(variants, global_defines);
+#ifdef __EMSCRIPTEN__
+		emscripten_console_log("🔧 CANVAS SHADER: Canvas shader initialized, creating default version data");
+#endif
+		printf("🔧 CANVAS SHADER: Canvas shader initialized, creating default version data\n");
 
+#ifdef __EMSCRIPTEN__
+		emscripten_console_log("🔧 CANVAS SHADER: Creating default version data");
+#endif
+		printf("🔧 CANVAS SHADER: Creating default version data\n");
 		shader.default_version_data = memnew(CanvasShaderData);
+#ifdef __EMSCRIPTEN__
+		emscripten_console_log("🔧 CANVAS SHADER: Default version data created, creating shader version");
+#endif
+		printf("🔧 CANVAS SHADER: Default version data created, creating shader version\n");
 		shader.default_version_data->version = shader.canvas_shader.version_create();
+#ifdef __EMSCRIPTEN__
+		emscripten_console_log(shader.default_version_data->version.is_valid() ? "🔧 CANVAS SHADER: Created version: VALID" : "🔧 CANVAS SHADER: Created version: INVALID");
+#endif
+		printf("🔧 CANVAS SHADER: Created version: %s\n", shader.default_version_data->version.is_valid() ? "VALID" : "INVALID");
 		shader.default_version_data->blend_mode = RendererRD::MaterialStorage::ShaderData::BLEND_MODE_MIX;
+#ifdef __EMSCRIPTEN__
+		emscripten_console_log("🔧 CANVAS SHADER: Getting default shader RID");
+#endif
+		printf("🔧 CANVAS SHADER: Getting default shader RID\n");
 		shader.default_version_rd_shader = shader.default_version_data->get_shader(SHADER_VARIANT_QUAD, false);
+#ifdef __EMSCRIPTEN__
+		emscripten_console_log(shader.default_version_rd_shader.is_valid() ? "🔧 CANVAS SHADER: Default shader RID: VALID" : "🔧 CANVAS SHADER: Default shader RID: INVALID");
+#endif
+		printf("🔧 CANVAS SHADER: Default shader RID: %s\n", shader.default_version_rd_shader.is_valid() ? "VALID" : "INVALID");
 	}
 
 	{
@@ -2065,6 +2125,12 @@ void fragment() {
 		}
 		state.instance_data_array = memnew_arr(InstanceData, state.max_instances_per_buffer);
 	}
+#ifdef __EMSCRIPTEN__
+	emscripten_console_log("🔧🔧🔧 CANVAS CONSTRUCTOR: RendererCanvasRenderRD constructor completed successfully 🔧🔧🔧");
+#endif
+	printf("🔧🔧🔧 CANVAS CONSTRUCTOR: RendererCanvasRenderRD constructor completed successfully 🔧🔧🔧\n");
+	print_error("🔧🔧🔧 CANVAS CONSTRUCTOR: RendererCanvasRenderRD constructor completed successfully 🔧🔧🔧");
+	print_line("🔧🔧🔧 CANVAS CONSTRUCTOR: RendererCanvasRenderRD constructor completed successfully 🔧🔧🔧");
 }
 
 bool RendererCanvasRenderRD::free(RID p_rid) {

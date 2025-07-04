@@ -65,6 +65,9 @@ if env["javascript_eval"]:
     sys_env.AddJSLibraries(["js/libs/library_godot_javascript_singleton.js"])
 
 if env.get("webgpu", False):
+    # SPIR-V to WGSL conversion utilities (must be loaded first)
+    sys_env.AddJSPre(["js/spirv_to_wgsl.js"])
+    
     # WebGPU device creation before main() starts (run-dependency approach)
     sys_env.AddJSPre(["js/pre_wgpu.js"])
 

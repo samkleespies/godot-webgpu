@@ -172,10 +172,24 @@ const Engine = (function () {
 							me.rtenv['copyToFS'](file.path, file.buffer);
 						}
 						preloader.preloadedFiles.length = 0; // Clear memory
-						me.rtenv['callMain'](me.config.args);
-						initPromise = null;
-						me.installServiceWorker();
-						resolve();
+
+						// WEBGPU FIX: Wait for run dependencies before calling main
+						function waitForRunDependencies() {
+							const module = me.rtenv;
+							if (module.runDependencies && module.runDependencies > 0) {
+								console.log(`🔧 ENGINE: Waiting for ${module.runDependencies} run dependencies before starting main...`);
+								setTimeout(waitForRunDependencies, 10);
+								return;
+							}
+
+							console.log('🔧 ENGINE: All run dependencies resolved, starting main...');
+							me.rtenv['callMain'](me.config.args);
+							initPromise = null;
+							me.installServiceWorker();
+							resolve();
+						}
+
+						waitForRunDependencies();
 					});
 				});
 			},

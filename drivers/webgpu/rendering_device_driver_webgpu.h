@@ -151,6 +151,7 @@ private:
 		WGPUBufferUsageFlags usage = 0;
 		bool is_mapped = false;
 		uint8_t *mapped_data = nullptr;
+		bool needs_write_back = false; // For emulated mapping that needs wgpuQueueWriteBuffer
 	};
 
 	struct TextureInfo {
@@ -163,6 +164,7 @@ private:
 		uint32_t array_layers = 1;
 		WGPUTextureFormat format = WGPUTextureFormat_Undefined;
 		WGPUTextureUsageFlags usage = 0;
+		bool is_shared = false; // Track if this texture shares resources with another
 	};
 
 	struct SamplerInfo {
@@ -549,6 +551,7 @@ public:
 
 	// ----- SHADERS -----
 	virtual ShaderID shader_create_from_container(const Ref<RenderingShaderContainer> &p_shader_container, const Vector<ImmutableSampler> &p_immutable_samplers) override;
+	ShaderID shader_create_from_bytecode(const Vector<uint8_t> &p_shader_binary, const Vector<ImmutableSampler> &p_immutable_samplers);
 	virtual void shader_free(ShaderID p_shader) override;
 	virtual void shader_destroy_modules(ShaderID p_shader) override;
 

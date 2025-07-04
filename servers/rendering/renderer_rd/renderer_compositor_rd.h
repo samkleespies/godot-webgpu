@@ -140,13 +140,13 @@ public:
 		return OK;
 	}
 
-	static RendererCompositor *_create_current() {
-		return memnew(RendererCompositorRD);
-	}
+	static RendererCompositor *_create_current();
 
 	static void make_current() {
+		print_line("🔧🔧🔧 COMPOSITOR: RendererCompositorRD::make_current() called 🔧🔧🔧");
 		_create_func = _create_current;
 		low_end = false;
+		print_line("🔧🔧🔧 COMPOSITOR: _create_func set to _create_current 🔧🔧🔧");
 	}
 
 	static RendererCompositorRD *get_singleton() { return singleton; }

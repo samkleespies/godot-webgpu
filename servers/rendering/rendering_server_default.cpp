@@ -216,14 +216,19 @@ bool RenderingServerDefault::has_changed() const {
 void RenderingServerDefault::_init() {
 	RSG::threaded = create_thread;
 
+	print_line("🔧🔧🔧 RSG: Starting rendering server initialization 🔧🔧🔧");
 	RSG::canvas = memnew(RendererCanvasCull);
 	RSG::viewport = memnew(RendererViewport);
 	RendererSceneCull *sr = memnew(RendererSceneCull);
 	RSG::camera_attributes = memnew(RendererCameraAttributes);
 	RSG::scene = sr;
+	print_line("🔧🔧🔧 RSG: About to call RendererCompositor::create() 🔧🔧🔧");
 	RSG::rasterizer = RendererCompositor::create();
+	print_line("🔧🔧🔧 RSG: RendererCompositor::create() returned, rasterizer = " + itos((uint64_t)RSG::rasterizer) + " 🔧🔧🔧");
 	RSG::utilities = RSG::rasterizer->get_utilities();
+	print_line("🔧🔧🔧 RSG: About to call rasterizer->initialize() 🔧🔧🔧");
 	RSG::rasterizer->initialize();
+	print_line("🔧🔧🔧 RSG: rasterizer->initialize() completed 🔧🔧🔧");
 	RSG::light_storage = RSG::rasterizer->get_light_storage();
 	RSG::material_storage = RSG::rasterizer->get_material_storage();
 	RSG::mesh_storage = RSG::rasterizer->get_mesh_storage();
@@ -231,8 +236,11 @@ void RenderingServerDefault::_init() {
 	RSG::texture_storage = RSG::rasterizer->get_texture_storage();
 	RSG::gi = RSG::rasterizer->get_gi();
 	RSG::fog = RSG::rasterizer->get_fog();
+	print_line("🔧🔧🔧 RSG: About to get canvas renderer 🔧🔧🔧");
 	RSG::canvas_render = RSG::rasterizer->get_canvas();
+	print_line("🔧🔧🔧 RSG: Canvas renderer obtained, canvas_render = " + itos((uint64_t)RSG::canvas_render) + " 🔧🔧🔧");
 	sr->set_scene_render(RSG::rasterizer->get_scene());
+	print_line("🔧🔧🔧 RSG: Rendering server initialization COMPLETED 🔧🔧🔧");
 }
 
 void RenderingServerDefault::_finish() {

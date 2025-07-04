@@ -30,6 +30,10 @@
 
 #include "renderer_compositor_rd.h"
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten/console.h>
+#endif
+
 #include "core/config/project_settings.h"
 #include "core/io/dir_access.h"
 
@@ -326,7 +330,19 @@ RendererCompositorRD::RendererCompositorRD() {
 	light_storage = memnew(RendererRD::LightStorage);
 	particles_storage = memnew(RendererRD::ParticlesStorage);
 	fog = memnew(RendererRD::Fog);
+#ifdef __EMSCRIPTEN__
+	emscripten_console_log("🔧🔧🔧 COMPOSITOR: About to create RendererCanvasRenderRD 🔧🔧🔧");
+#endif
+	printf("🔧🔧🔧 COMPOSITOR: About to create RendererCanvasRenderRD 🔧🔧🔧\n");
+	print_error("🔧🔧🔧 COMPOSITOR: About to create RendererCanvasRenderRD 🔧🔧🔧");
+	print_line("🔧🔧🔧 COMPOSITOR: About to create RendererCanvasRenderRD 🔧🔧🔧");
 	canvas = memnew(RendererCanvasRenderRD());
+#ifdef __EMSCRIPTEN__
+	emscripten_console_log("🔧🔧🔧 COMPOSITOR: RendererCanvasRenderRD created successfully 🔧🔧🔧");
+#endif
+	printf("🔧🔧🔧 COMPOSITOR: RendererCanvasRenderRD created successfully 🔧🔧🔧\n");
+	print_error("🔧🔧🔧 COMPOSITOR: RendererCanvasRenderRD created successfully 🔧🔧🔧");
+	print_line("🔧🔧🔧 COMPOSITOR: RendererCanvasRenderRD created successfully 🔧🔧🔧");
 
 	String rendering_method = OS::get_singleton()->get_current_rendering_method();
 	uint64_t textures_per_stage = RD::get_singleton()->limit_get(RD::LIMIT_MAX_TEXTURES_PER_SHADER_STAGE);
@@ -345,6 +361,10 @@ RendererCompositorRD::RendererCompositorRD() {
 	}
 
 	scene->init();
+}
+
+RendererCompositor *RendererCompositorRD::_create_current() {
+	return memnew(RendererCompositorRD);
 }
 
 RendererCompositorRD::~RendererCompositorRD() {

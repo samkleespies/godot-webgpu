@@ -1122,40 +1122,55 @@ DisplayServerWeb::DisplayServerWeb(const String &p_rendering_driver, WindowMode 
 #ifdef WEBGPU_ENABLED
 	if (p_rendering_driver == "webgpu") {
 		print_verbose("WebGPU rendering driver selected");
+		print_line("🔧🔧🔧 DISPLAY: WebGPU rendering driver selected, starting initialization 🔧🔧🔧");
 
 		// Check if WebGPU is supported
+		print_line("🔧🔧🔧 DISPLAY: Checking WebGPU browser support 🔧🔧🔧");
 		if (!godot_js_webgpu_is_supported()) {
+			print_line("🔧🔧🔧 DISPLAY: WebGPU NOT supported by browser 🔧🔧🔧");
 			OS::get_singleton()->alert(
 				"Your browser does not support WebGPU.\n\n"
 				"WebGPU requires Chrome 113+ or Firefox with WebGPU enabled.",
 				"WebGPU not supported");
 			RasterizerDummy::make_current();
+			print_line("🔧🔧🔧 DISPLAY: Fallback to RasterizerDummy (no browser support) 🔧🔧🔧");
 		} else {
+			print_line("🔧🔧🔧 DISPLAY: WebGPU IS supported by browser, proceeding 🔧🔧🔧");
 			// Initialize WebGPU
+			print_line("🔧🔧🔧 DISPLAY: Calling godot_js_webgpu_init 🔧🔧🔧");
 			if (godot_js_webgpu_init(canvas_id)) {
 				print_verbose("WebGPU initialized successfully");
+				print_line("🔧🔧🔧 DISPLAY: godot_js_webgpu_init SUCCESS 🔧🔧🔧");
 
 				// Create WebGPU rendering context
+				print_line("🔧🔧🔧 DISPLAY: Creating RenderingContextDriverWebGPU 🔧🔧🔧");
 				rendering_context = memnew(RenderingContextDriverWebGPU);
 				if (rendering_context->initialize() == OK) {
 					print_verbose("WebGPU rendering context created");
+					print_line("🔧🔧🔧 DISPLAY: RenderingContextDriverWebGPU initialize SUCCESS 🔧🔧🔧");
 
 					// Create window surface (like other platforms do)
+					print_line("🔧🔧🔧 DISPLAY: Creating window surface 🔧🔧🔧");
 					if (rendering_context->window_create(MAIN_WINDOW_ID, nullptr) == OK) {
 						print_verbose("WebGPU window surface created");
+						print_line("🔧🔧🔧 DISPLAY: Window surface creation SUCCESS 🔧🔧🔧");
 
 						// Create and initialize the rendering device with deferred initialization support
+						print_line("🔧🔧🔧 DISPLAY: Creating RenderingDevice 🔧🔧🔧");
 						rendering_device = memnew(RenderingDevice);
 
 						// WebGPU callback mechanism will handle device retry automatically
 
 						// Try to initialize WebGPU device (deferred initialization)
 						print_line("WebGPU: Attempting deferred initialization...");
+						print_line("🔧🔧🔧 DISPLAY: Calling rendering_device->initialize 🔧🔧🔧");
 						Error init_result = rendering_device->initialize(rendering_context, MAIN_WINDOW_ID);
+						print_line("🔧🔧🔧 DISPLAY: rendering_device->initialize returned: " + itos(init_result) + " 🔧🔧🔧");
 
 						if (init_result == ERR_BUSY) {
 							print_line("WebGPU: Device not ready on first attempt - this is expected");
 							print_line("WebGPU: Will continue with dummy renderer until device becomes available");
+							print_line("🔧🔧🔧 DISPLAY: Got ERR_BUSY, treating as OK for deferred init 🔧🔧🔧");
 							// Don't fail - let the engine continue with dummy renderer
 							// The device will be initialized later when it becomes available
 							init_result = OK;
@@ -1163,34 +1178,45 @@ DisplayServerWeb::DisplayServerWeb(const String &p_rendering_driver, WindowMode 
 
 						if (init_result == OK) {
 							print_line("WebGPU rendering device initialized successfully");
+							print_line("🔧🔧🔧 DISPLAY: RenderingDevice init SUCCESS, creating screen 🔧🔧🔧");
 							rendering_device->screen_create(MAIN_WINDOW_ID);
+							print_line("🔧🔧🔧 DISPLAY: Screen created, calling RendererCompositorRD::make_current() 🔧🔧🔧");
 
 							// Use the RD-based compositor instead of dummy
 							RendererCompositorRD::make_current();
 							print_line("WebGPU renderer activated successfully!");
+							print_line("🔧🔧🔧 DISPLAY: RendererCompositorRD::make_current() COMPLETED! 🔧🔧🔧");
 						} else {
 							print_error("Failed to initialize WebGPU rendering device - error: " + itos(init_result));
+							print_line("🔧🔧🔧 DISPLAY: RenderingDevice init FAILED, cleaning up 🔧🔧🔧");
 							memdelete(rendering_device);
 							rendering_device = nullptr;
 							memdelete(rendering_context);
 							rendering_context = nullptr;
 							RasterizerDummy::make_current();
+							print_line("🔧🔧🔧 DISPLAY: Fallback to RasterizerDummy (device init failed) 🔧🔧🔧");
 						}
 					} else {
 						print_error("Failed to create WebGPU window surface");
+						print_line("🔧🔧🔧 DISPLAY: Window surface creation FAILED 🔧🔧🔧");
 						memdelete(rendering_context);
 						rendering_context = nullptr;
 						RasterizerDummy::make_current();
+						print_line("🔧🔧🔧 DISPLAY: Fallback to RasterizerDummy (surface failed) 🔧🔧🔧");
 					}
 				} else {
 					print_error("Failed to create WebGPU rendering context");
+					print_line("🔧🔧🔧 DISPLAY: RenderingContextDriverWebGPU init FAILED 🔧🔧🔧");
 					memdelete(rendering_context);
 					rendering_context = nullptr;
 					RasterizerDummy::make_current();
+					print_line("🔧🔧🔧 DISPLAY: Fallback to RasterizerDummy (context failed) 🔧🔧🔧");
 				}
 			} else {
 				print_error("Failed to initialize WebGPU");
+				print_line("🔧🔧🔧 DISPLAY: godot_js_webgpu_init FAILED 🔧🔧🔧");
 				RasterizerDummy::make_current();
+				print_line("🔧🔧🔧 DISPLAY: Fallback to RasterizerDummy (webgpu init failed) 🔧🔧🔧");
 			}
 		}
 	}

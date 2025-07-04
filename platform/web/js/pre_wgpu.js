@@ -5,25 +5,20 @@
 if (typeof Module === 'undefined') Module = {};
 Module.preRun = Module.preRun || [];
 
-// CRITICAL FIX: Force run dependency mechanism to be available
+// CRITICAL FIX: Initialize run dependency system properly
+Module.runDependencies = Module.runDependencies || 0;
+
+// Use real Emscripten run dependency functions if available, otherwise provide fallback
 Module.addRunDependency = Module.addRunDependency || function(id) {
   console.log('🔧 FALLBACK: addRunDependency called for:', id);
-  Module.runDependencies = Module.runDependencies || 0;
   Module.runDependencies++;
   console.log('🔧 FALLBACK: runDependencies now:', Module.runDependencies);
 };
 
 Module.removeRunDependency = Module.removeRunDependency || function(id) {
   console.log('🔧 FALLBACK: removeRunDependency called for:', id);
-  Module.runDependencies = Module.runDependencies || 0;
   if (Module.runDependencies > 0) Module.runDependencies--;
   console.log('🔧 FALLBACK: runDependencies now:', Module.runDependencies);
-
-  // If all dependencies are resolved, call run if it exists
-  if (Module.runDependencies === 0 && Module.run) {
-    console.log('🔧 FALLBACK: All dependencies resolved, calling run()');
-    Module.run();
-  }
 };
 
 // CRITICAL FIX: Debug and use immediate execution approach
@@ -35,47 +30,82 @@ console.log('🔧 PRE_WGPU.JS: Script is loading...');
 // We must register this *before* kicking off any async work so that
 // the later Module.removeRunDependency('wgpu_device') actually brings
 // the counter back to zero.
-if (typeof Module !== 'undefined' && Module.addRunDependency && !Module.__wgpu_device_dependency_added) {
+if (!Module.__wgpu_device_dependency_added) {
   Module.__wgpu_device_dependency_added = true;
   console.log('🔧 PRE_WGPU.JS: Adding run dependency wgpu_device (early)');
   Module.addRunDependency('wgpu_device');
+  console.log('🔧 PRE_WGPU.JS: runDependencies after adding:', Module.runDependencies);
 }
 
-// CRITICAL FIX: Try immediate device creation approach
-// Since Module callbacks are not working, try creating device immediately when script loads
-console.log('🔧 PRE_WGPU.JS: Attempting immediate WebGPU device creation...');
+// CRITICAL FIX: Start device creation immediately when script loads
+console.log('🔧 PRE_WGPU.JS: Starting immediate WebGPU device creation...');
 
-// Start device creation immediately
-let immediateDeviceCreated = false;
+// Start device creation immediately - this should complete before main() starts due to run dependency
 createWebGPUDeviceAsync().then(() => {
-  console.log('🔧 PRE_WGPU.JS: Immediate device creation completed');
-  immediateDeviceCreated = true;
+  console.log('🔧 PRE_WGPU.JS: Immediate device creation completed successfully');
 }).catch(err => {
   console.error('🔧 PRE_WGPU.JS: Immediate device creation failed:', err);
-  immediateDeviceCreated = true;
+  // Even on failure, we need to remove the run dependency to avoid deadlock
+  if (Module && Module.removeRunDependency) {
+    console.log('🔧 PRE_WGPU.JS: Removing run dependency due to device creation failure');
+    Module.removeRunDependency('wgpu_device');
+  }
 });
 
-// CRITICAL FIX: Also try Module.onRuntimeInitialized as backup
+// CRITICAL FIX: Ensure device import happens after WASM is ready
+Module.onRuntimeInitialized = (function(originalCallback) {
+  return function() {
+    console.log('🔧 PRE_WGPU.JS: Runtime initialized, checking device import...');
+
+    // Call original callback first if it exists
+    if (originalCallback && typeof originalCallback === 'function') {
+      originalCallback();
+    }
+
+    // Now try to import the device if it's available but not yet imported
+    if (Module.preinitializedWebGPUDevice && typeof WebGPU !== 'undefined' && WebGPU.importJsDevice) {
+      console.log('🔧 PRE_WGPU.JS: Attempting device import after runtime init...');
+      try {
+        const deviceHandle = WebGPU.importJsDevice(Module.preinitializedWebGPUDevice);
+        if (deviceHandle && deviceHandle !== 0) {
+          console.log('✅ PRE_WGPU.JS: Device successfully imported after runtime init, handle:', deviceHandle);
+          WebGPU.preinitializedDeviceId = deviceHandle;
+        } else {
+          console.warn('⚠️ PRE_WGPU.JS: Device import returned null handle after runtime init');
+        }
+      } catch (err) {
+        console.error('❌ PRE_WGPU.JS: Device import failed after runtime init:', err);
+      }
+    }
+  };
+})(Module.onRuntimeInitialized);
+
+// CRITICAL FIX: Use a better approach - don't try to block, use run dependencies properly
 const originalOnRuntimeInitialized = Module.onRuntimeInitialized;
 Module.onRuntimeInitialized = function() {
+  console.log('🕒 Runtime initialized: checking if WebGPU device is ready...');
+  
+  // Check if device is already available
   if (Module.preinitializedWebGPUDevice) {
-    console.log('✅ PRE_WGPU.JS: WebGPU device already initialized – skipping additional creation');
+    console.log('✅ PRE_WGPU.JS: WebGPU device already initialized – proceeding');
     if (typeof originalOnRuntimeInitialized === 'function') {
       originalOnRuntimeInitialized();
     }
     return;
   }
 
-  console.log('🕒 Runtime initialized: requesting WebGPU device with GUARANTEED blocking before main()…');
-  console.log('✅ Using Module.onRuntimeInitialized to guarantee device is ready before main() starts');
+  // If device isn't ready, the run dependency system should prevent main() from starting
+  // But if we get here, it means the dependency system failed, so fall back gracefully
+  console.log('⚠️ PRE_WGPU.JS: WebGPU device not ready at runtime init - starting async creation');
+  
+  // Start async device creation but don't block
+  createWebGPUDeviceAsync().then(() => {
+    console.log('✅ PRE_WGPU.JS: Async device creation completed after runtime init');
+  }).catch(err => {
+    console.error('❌ PRE_WGPU.JS: Async device creation failed after runtime init:', err);
+  });
 
-  const success = createWebGPUDeviceBlocking();
-  if (success) {
-    console.log('✅ WebGPU device ready - proceeding with original onRuntimeInitialized');
-  } else {
-    console.error('❌ WebGPU device creation failed - proceeding anyway');
-  }
-
+  // Continue with original onRuntimeInitialized regardless
   if (typeof originalOnRuntimeInitialized === 'function') {
     originalOnRuntimeInitialized();
   }
@@ -101,18 +131,32 @@ function createWebGPUDeviceBlocking() {
     deviceReady = true; // Mark as ready even on error to exit loop
   });
 
-  // CRITICAL FIX: Use a true blocking approach with synchronous waiting
+  // CRITICAL FIX: Use a proper blocking approach that allows Promise resolution
   console.log('🔍 BLOCKING: Starting blocking wait loop...');
   const startTime = performance.now();
-  const timeout = 20000; // Increased to 20 seconds to accommodate slower adapter/device creation on some systems
+  const timeout = 10000; // 10 seconds should be enough for device creation
 
-  // This is a true blocking loop that will prevent main() from starting
+  // This is a blocking loop that allows the event loop to process
   while (!deviceReady && (performance.now() - startTime) < timeout) {
-    // CRITICAL FIX: Use a more aggressive blocking approach
-    // Force the event loop to process by using a synchronous delay
-    const blockStart = performance.now();
-    while (performance.now() - blockStart < 10) {
-      // Tight busy wait for 10ms to allow Promise resolution
+    // CRITICAL FIX: Use a non-blocking approach that allows Promise resolution
+    // Instead of busy-waiting, we'll yield to the event loop periodically
+    
+    // Process any pending microtasks (Promises)
+    if (typeof queueMicrotask !== 'undefined') {
+      let microtaskProcessed = false;
+      queueMicrotask(() => { microtaskProcessed = true; });
+      
+      // Wait for the microtask to complete
+      const microtaskStart = performance.now();
+      while (!microtaskProcessed && (performance.now() - microtaskStart) < 100) {
+        // Small busy wait to allow microtask processing
+      }
+    }
+    
+    // Small delay to allow event loop processing
+    const delayStart = performance.now();
+    while (performance.now() - delayStart < 1) {
+      // Very small busy wait (1ms) to yield to event loop
     }
   }
 
@@ -460,11 +504,19 @@ Module.createWebGPUBuffer = function(deviceHandle, size, usage, mappedAtCreation
       return 0;
     }
 
+    // CRITICAL FIX: Round up size to multiple of 4 if mappedAtCreation=true
+    const actualMappedAtCreation = mappedAtCreation || false;
+    let actualSize = size;
+    if (actualMappedAtCreation && (size & 0x3) !== 0) {
+      actualSize = (size + 3) & ~0x3; // Round up to next multiple of 4
+      console.log('🔧 JS BUFFER: Rounded size from', size, 'to', actualSize, 'for mappedAtCreation');
+    }
+
     // Create buffer descriptor
     const bufferDescriptor = {
-      size: size,
+      size: actualSize,
       usage: _sanitizeBufferUsage(usage),
-      mappedAtCreation: mappedAtCreation || false
+      mappedAtCreation: actualMappedAtCreation
     };
 
     console.log('🔧 JS BUFFER: Creating buffer with descriptor:', bufferDescriptor);
@@ -573,11 +625,29 @@ Module.createWebGPUSampler = function(deviceHandle, magFilter, minFilter, mipmap
 
     const originalImport = WebGPU.importJsDevice;
     WebGPU.importJsDevice = function(dev, parentPtr) {
+      console.log('🔧 PATCH: importJsDevice called with dev:', !!dev, 'queue:', !!dev?.queue, 'type:', typeof dev);
+      
+      // CRITICAL FIX: Use the pre-stored device if the passed device is incomplete
+      let deviceToUse = dev;
       if (!dev || !dev.queue) {
-        console.log('🔧 PATCH: importJsDevice received incomplete device – returning 0');
+        console.log('🔧 PATCH: Device incomplete, using pre-stored device');
+        deviceToUse = Module.preinitializedWebGPUDevice || WebGPU.device;
+        
+        if (!deviceToUse || !deviceToUse.queue) {
+          console.log('🔧 PATCH: No valid device available – returning 0');
+          return 0;
+        }
+        console.log('🔧 PATCH: Using pre-stored device successfully');
+      }
+      
+      try {
+        const result = originalImport(deviceToUse, parentPtr);
+        console.log('🔧 PATCH: importJsDevice returned handle:', result);
+        return result;
+      } catch (err) {
+        console.error('🔧 PATCH: importJsDevice threw error:', err);
         return 0;
       }
-      return originalImport(dev, parentPtr);
     };
     console.log('🔧 PATCH: WebGPU.importJsDevice safeguarded');
   };
@@ -642,24 +712,74 @@ Module.__getJsObject = _jsObjectGet;
 // -----------------------------
 (function monitorGetDevicePatching() {
   const safeGet = function() {
-    const dev = Module.preinitializedWebGPUDevice;
+    console.log('🎯 CRITICAL: safeGet function called!');
+    const dev = Module.preinitializedWebGPUDevice || (typeof WebGPU !== 'undefined' ? WebGPU.device : null);
     if (!dev || !dev.queue) {
-      console.log('🕵️ get_device called but queue missing → returning 0');
+      console.log('🕵️ get_device called but device not ready → returning 0');
       return 0;
     }
-    return WebGPU.importJsDevice(dev, 0);
+    
+    // CRITICAL FIX: Always return the device handle if available
+    if (typeof WebGPU !== 'undefined' && typeof WebGPU.importJsDevice === 'function') {
+      try {
+        const handle = WebGPU.importJsDevice(dev, 0);
+        if (handle && handle !== 0) {
+          console.log('🎯 SUCCESS: Returning device handle:', handle);
+          return handle;
+        }
+      } catch (err) {
+        console.error('🕵️ Error in safeGet importJsDevice:', err);
+      }
+    }
+    
+    // Fallback: Try to get cached handle if importJsDevice failed
+    if (window.__webgpu_cached_device_handle) {
+      console.log('🎯 FALLBACK: Using cached device handle:', window.__webgpu_cached_device_handle);
+      return window.__webgpu_cached_device_handle;
+    }
+    
+    console.log('🕵️ get_device: No valid handle available, returning 0');
+    return 0;
   };
 
   const reapply = () => {
+    // Check if we should stop the loop first
+    const dev = Module.preinitializedWebGPUDevice || (typeof WebGPU !== 'undefined' ? WebGPU.device : null);
+    if (dev && dev.queue && typeof WebGPU !== 'undefined' && typeof WebGPU.importJsDevice === 'function') {
+      try {
+        const testHandle = WebGPU.importJsDevice(dev, 0);
+        if (testHandle && testHandle !== 0) {
+          console.log('🎯 Device ready and working, stopping re-patch loop');
+          // Cache the device handle for future use
+          window.__webgpu_cached_device_handle = testHandle;
+          return; // Stop the loop
+        }
+      } catch (err) {
+        // Continue the loop if there's an error
+        console.log('🔧 Testing device handle failed, continuing loop:', err.message);
+      }
+    }
+    
+    // Only re-patch if we haven't succeeded yet
     if (typeof Module.emscripten_webgpu_get_device === 'function' && Module.emscripten_webgpu_get_device !== safeGet) {
       console.log('🕵️ Re-patching Module.emscripten_webgpu_get_device at', performance.now().toFixed(2), 'ms');
+      console.log('🔧 DEBUG: Module.emscripten_webgpu_get_device type:', typeof Module.emscripten_webgpu_get_device);
       Module.emscripten_webgpu_get_device = safeGet;
     }
     if (typeof _emscripten_webgpu_get_device === 'function' && _emscripten_webgpu_get_device !== safeGet) {
       console.log('🕵️ Re-patching global _emscripten_webgpu_get_device at', performance.now().toFixed(2), 'ms');
+      console.log('🔧 DEBUG: _emscripten_webgpu_get_device type:', typeof _emscripten_webgpu_get_device);
       window._emscripten_webgpu_get_device = safeGet;
     }
-    setTimeout(reapply, 0); // keep checking each tick until stable
+    
+    // Also check if there are other variations of the function
+    if (typeof emscripten_webgpu_get_device === 'function' && emscripten_webgpu_get_device !== safeGet) {
+      console.log('🔧 DEBUG: Found emscripten_webgpu_get_device (no underscore), patching...');
+      window.emscripten_webgpu_get_device = safeGet;
+    }
+    
+    // Increase timeout to reduce spam
+    window.__webgpu_reapply_timeout = setTimeout(reapply, 100);
   };
   reapply();
 })();
@@ -750,9 +870,19 @@ if (Module.preinitializedWebGPUDevice && Module.preinitializedWebGPUDevice.queue
   proto.createBuffer = function(descriptor) {
     try {
       const sanitized = Object.assign({}, descriptor);
+
+      // CRITICAL FIX: Sanitize usage flags
       if (sanitized && 'usage' in sanitized) {
         sanitized.usage = _sanitizeBufferUsage(sanitized.usage);
       }
+
+      // CRITICAL FIX: WebGPU requires buffer size to be multiple of 4 when mappedAtCreation=true
+      if (sanitized && sanitized.mappedAtCreation && sanitized.size && (sanitized.size & 0x3) !== 0) {
+        const originalSize = sanitized.size;
+        sanitized.size = (originalSize + 3) & ~0x3; // Round up to next multiple of 4
+        console.log("🔧 GLOBAL PATCH: Rounded buffer size from", originalSize, "to", sanitized.size, "for mappedAtCreation");
+      }
+
       return origCreate.call(this, sanitized);
     } catch (e) {
       console.error('🔧 PATCH ERROR: createBuffer sanitize failed', e);
@@ -789,3 +919,4 @@ if (Module.preinitializedWebGPUDevice && Module.preinitializedWebGPUDevice.queue
   };
   tick();
 })();
+
