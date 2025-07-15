@@ -12,7 +12,7 @@ function webgpuCreateDevice() {
   console.log("GODOT WEBGPU PRERUN: Starting device creation...");
 
   if (!navigator.gpu) {
-    console.error("GODOT WEBGPU PRERUN ERROR: WebGPU not supported – falling back.");
+    console.log("GODOT WEBGPU PRERUN ERROR: WebGPU not supported – falling back.");
     return;
   }
 
@@ -73,7 +73,7 @@ function webgpuCreateDevice() {
       removeRunDependency('webgpu-device');
     })
     .catch(err => {
-      console.error("GODOT WEBGPU PRERUN ERROR: Couldn't obtain WebGPU device:", err);
+      console.log("GODOT WEBGPU PRERUN ERROR: Couldn't obtain WebGPU device:", err);
       console.log("GODOT WEBGPU PRERUN: Removing run dependency (failed)...");
       removeRunDependency('webgpu-device');            // fail fast
     });

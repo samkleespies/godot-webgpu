@@ -491,29 +491,29 @@ bool RenderingContextDriverWebGPU::_initialize_webgpu_device() {
 								console.log("WebGPU context auto-configured successfully");
 								Module._webgpu_surface_configured = true;
 							} catch (error) {
-								console.error("Failed to auto-configure WebGPU context:", error);
+								console.log("Failed to auto-configure WebGPU context:", error);
 							}
 						}
 					}).catch(err => {
-						console.error("Failed to create WebGPU device:", err);
+						console.log("Failed to create WebGPU device:", err);
 						Module._webgpu_device_ready = false;
 						// DISABLED: Run dependency removal handled by pre_wgpu.js
 						console.log("DISABLED: Error handling for run dependency handled by pre_wgpu.js");
 					});
 				} else {
-					console.error("No WebGPU adapter available");
+					console.log("No WebGPU adapter available");
 					Module._webgpu_device_ready = false;
 					// DISABLED: Run dependency removal handled by pre_wgpu.js
 					console.log("DISABLED: Error handling for run dependency handled by pre_wgpu.js");
 				}
 			}).catch(err => {
-				console.error("Failed to request WebGPU adapter:", err);
+				console.log("Failed to request WebGPU adapter:", err);
 				Module._webgpu_device_ready = false;
 				// DISABLED: Run dependency removal handled by pre_wgpu.js
 				console.log("DISABLED: Error handling for run dependency handled by pre_wgpu.js");
 			});
 		} else {
-			console.error("WebGPU not supported");
+			console.log("WebGPU not supported");
 			Module._webgpu_device_ready = false;
 			// DISABLED: Run dependency removal handled by pre_wgpu.js
 			console.log("DISABLED: Error handling for run dependency handled by pre_wgpu.js");

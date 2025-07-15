@@ -1365,8 +1365,40 @@ RenderingDeviceDriver::BufferID RenderingDeviceDriverWebGPU::buffer_create(uint6
 	print_error("🔧 BUFFER CREATE DEBUG: About to create WebGPU buffer - size: " + itos(buffer_desc.size) + ", usage: " + itos(buffer_desc.usage));
 	print_error("🔧 BUFFER CREATE DEBUG: buffer_desc.mappedAtCreation: " + itos(buffer_desc.mappedAtCreation));
 	print_error("🔧 BUFFER CREATE DEBUG: buffer_desc.label: " + String(buffer_desc.label ? buffer_desc.label : "null"));
+
+	// CRITICAL DEBUG: Check buffer descriptor in JavaScript before creation
+	EM_ASM({
+		console.error('🔧 JS BUFFER CREATE DEBUG: About to create buffer with descriptor at address: ' + $0);
+		console.error('🔧 JS BUFFER CREATE DEBUG: C++ reports size: ' + $1 + ', usage: ' + $2);
+		console.error('🔧 JS BUFFER CREATE DEBUG: This will help us track the size 0 issue');
+	}, &buffer_desc, buffer_desc.size, buffer_desc.usage);
+
 	WGPUBuffer webgpu_buffer = wgpuDeviceCreateBuffer(device, &buffer_desc);
 	print_error("🔧 BUFFER CREATE DEBUG: wgpuDeviceCreateBuffer returned handle: " + itos((uint64_t)webgpu_buffer));
+
+	// CRITICAL DEBUG: Check the created buffer's properties in JavaScript
+	if (webgpu_buffer) {
+		EM_ASM({
+			var bufferHandle = $0;
+			console.error('🔧 JS BUFFER CREATED: Checking newly created buffer handle: ' + bufferHandle);
+			if (typeof WebGPU !== 'undefined' && WebGPU.Internals && WebGPU.Internals.jsObjects) {
+				var buffer = WebGPU.Internals.jsObjects[bufferHandle];
+				if (buffer) {
+					console.error('🔧 JS BUFFER CREATED: Buffer size: ' + buffer.size + ' (expected: ' + $1 + ')');
+					console.error('🔧 JS BUFFER CREATED: Buffer usage: ' + buffer.usage);
+					console.error('🔧 JS BUFFER CREATED: Buffer mapState: ' + buffer.mapState);
+					if (buffer.size === 0) {
+						console.error('🚨🚨🚨 BUFFER SIZE ZERO DETECTED IMMEDIATELY AFTER CREATION!');
+						console.error('🚨🚨🚨 This proves the issue is in the buffer creation process');
+					}
+				} else {
+					console.error('🔧 JS BUFFER CREATED ERROR: Buffer not found in registry immediately after creation');
+				}
+			} else {
+				console.error('🔧 JS BUFFER CREATED ERROR: WebGPU registry not available');
+			}
+		}, (uintptr_t)webgpu_buffer, buffer_desc.size);
+	}
 	if (!webgpu_buffer) {
 		print_error("WEBGPU BUFFER ERROR: Failed to create WebGPU buffer (size: " + itos(p_size) + " bytes, usage: " + itos(usage) + ")");
 
@@ -1597,6 +1629,10 @@ RenderingDeviceDriver::UniformSetID RenderingDeviceDriverWebGPU::uniform_set_cre
 					sampler_desc.addressModeU = WGPUAddressMode_Repeat;
 					sampler_desc.addressModeV = WGPUAddressMode_Repeat;
 					sampler_desc.addressModeW = WGPUAddressMode_Repeat;
+					// CRITICAL FIX: Set valid LOD values for WebGPU
+					sampler_desc.lodMinClamp = 0.0f;
+					sampler_desc.lodMaxClamp = 1000.0f; // Large value for max LOD
+					sampler_desc.maxAnisotropy = 1; // WebGPU minimum value
 
 					bind_entry.sampler = wgpuDeviceCreateSampler(device, &sampler_desc);
 				} else {
@@ -1971,9 +2007,9 @@ RenderingDeviceDriver::TextureID RenderingDeviceDriverWebGPU::texture_create(con
 	view_desc.format = webgpu_format;
 	view_desc.dimension = WGPUTextureViewDimension_2D; // TODO: Handle other dimensions
 	view_desc.baseMipLevel = 0;
-	view_desc.mipLevelCount = p_format.mipmaps;
+	view_desc.mipLevelCount = MAX(1, p_format.mipmaps); // WebGPU requires at least 1
 	view_desc.baseArrayLayer = 0;
-	view_desc.arrayLayerCount = p_format.array_layers;
+	view_desc.arrayLayerCount = MAX(1, p_format.array_layers); // WebGPU requires at least 1
 
 	WGPUTextureView texture_view = wgpuTextureCreateView(webgpu_texture, &view_desc);
 	if (!texture_view) {
@@ -2030,9 +2066,9 @@ RenderingDeviceDriver::TextureID RenderingDeviceDriverWebGPU::texture_create_sha
 	view_desc.format = _godot_format_to_webgpu(p_view.format);
 	view_desc.dimension = WGPUTextureViewDimension_2D; // Default to 2D
 	view_desc.baseMipLevel = 0;
-	view_desc.mipLevelCount = original_info->mip_levels;
+	view_desc.mipLevelCount = MAX(1, original_info->mip_levels); // WebGPU requires at least 1
 	view_desc.baseArrayLayer = 0;
-	view_desc.arrayLayerCount = original_info->array_layers;
+	view_desc.arrayLayerCount = MAX(1, original_info->array_layers); // WebGPU requires at least 1
 
 	WGPUTextureView texture_view = wgpuTextureCreateView(original_info->texture, &view_desc);
 	if (!texture_view) {
@@ -2078,9 +2114,9 @@ RenderingDeviceDriver::TextureID RenderingDeviceDriverWebGPU::texture_create_sha
 	}
 
 	view_desc.baseMipLevel = p_mipmap;
-	view_desc.mipLevelCount = p_mipmaps;
+	view_desc.mipLevelCount = MAX(1, p_mipmaps); // WebGPU requires at least 1
 	view_desc.baseArrayLayer = p_layer;
-	view_desc.arrayLayerCount = p_layers;
+	view_desc.arrayLayerCount = MAX(1, p_layers); // WebGPU requires at least 1
 
 	WGPUTextureView texture_view = wgpuTextureCreateView(original_info->texture, &view_desc);
 	if (!texture_view) {
@@ -2230,15 +2266,19 @@ RenderingDeviceDriver::SamplerID RenderingDeviceDriverWebGPU::sampler_create(con
 	sampler_desc.addressModeV = convert_address_mode(p_state.repeat_v);
 	sampler_desc.addressModeW = convert_address_mode(p_state.repeat_w);
 
-	// Set LOD parameters
-	sampler_desc.lodMinClamp = p_state.min_lod;
-	sampler_desc.lodMaxClamp = p_state.max_lod;
+	// Set LOD parameters - ensure valid values for WebGPU
+	float min_lod = MAX(0.0f, p_state.min_lod);
+	float max_lod = MAX(min_lod, p_state.max_lod);
 
-	// Set anisotropy
-	if (p_state.use_anisotropy) {
+	// WebGPU validation requires lodMinClamp <= lodMaxClamp and both >= 0
+	sampler_desc.lodMinClamp = min_lod;
+	sampler_desc.lodMaxClamp = max_lod;
+
+	// Set anisotropy - WebGPU requires maxAnisotropy >= 1
+	if (p_state.use_anisotropy && p_state.anisotropy_max >= 1) {
 		sampler_desc.maxAnisotropy = p_state.anisotropy_max;
 	} else {
-		sampler_desc.maxAnisotropy = 1;
+		sampler_desc.maxAnisotropy = 1; // WebGPU minimum value
 	}
 
 	// Create the sampler
@@ -3600,15 +3640,15 @@ void RenderingDeviceDriverWebGPU::command_copy_buffer_to_texture(CommandBufferID
 	// CRITICAL FIX: Use uintptr_t instead of uint64_t for proper pointer-to-int conversion
 	int buffer_validation_result = EM_ASM_INT({
 		var bufferHandle = $0;
-		console.error("🔧 JS BUFFER VALIDATION: Checking buffer handle:", bufferHandle);
+		console.log('🔧 JS BUFFER VALIDATION: Checking buffer handle:', bufferHandle);
 
 		// Check if buffer exists in WebGPU object registry
 		if (typeof WebGPU !== 'undefined' && WebGPU.Internals && WebGPU.Internals.jsObjects) {
 			var buffer = WebGPU.Internals.jsObjects[bufferHandle];
-			console.error("🔧 JS BUFFER VALIDATION: Buffer object:", buffer ? "found" : "NOT FOUND");
+			console.log('🔧 JS BUFFER VALIDATION: Buffer object:', buffer ? "found" : "NOT FOUND");
 			if (buffer) {
-				console.error("🔧 JS BUFFER VALIDATION: Buffer size:", buffer.size);
-				console.error("🔧 JS BUFFER VALIDATION: Buffer usage:", buffer.usage);
+				console.log('🔧 JS BUFFER VALIDATION: Buffer size:', buffer.size);
+				console.log('🔧 JS BUFFER VALIDATION: Buffer usage:', buffer.usage);
 
 				// CRITICAL CHECK: Verify buffer size matches expected size
 				var expectedSize = $1;
@@ -3616,10 +3656,10 @@ void RenderingDeviceDriverWebGPU::command_copy_buffer_to_texture(CommandBufferID
 					console.error("🔧 JS BUFFER VALIDATION ERROR: Buffer has size 0 - this is the root cause!");
 					return 2; // Buffer found but has size 0
 				} else if (buffer.size !== expectedSize) {
-					console.error("🔧 JS BUFFER VALIDATION WARNING: Buffer size mismatch - expected:", expectedSize, "actual:", buffer.size);
+					console.log('🔧 JS BUFFER VALIDATION WARNING: Buffer size mismatch - expected:', expectedSize, 'actual:', buffer.size);
 					return 3; // Buffer found but size mismatch
 				} else {
-					console.error("🔧 JS BUFFER VALIDATION SUCCESS: Buffer size matches expected size");
+					console.log('🔧 JS BUFFER VALIDATION SUCCESS: Buffer size matches expected size');
 					return 1; // Buffer found and valid
 				}
 			} else {

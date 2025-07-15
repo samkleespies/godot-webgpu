@@ -44,7 +44,7 @@ console.log('🔧 PRE_WGPU.JS: Starting immediate WebGPU device creation...');
 createWebGPUDeviceAsync().then(() => {
   console.log('🔧 PRE_WGPU.JS: Immediate device creation completed successfully');
 }).catch(err => {
-  console.error('🔧 PRE_WGPU.JS: Immediate device creation failed:', err);
+  console.log('🔧 PRE_WGPU.JS: Immediate device creation failed:', err);
   // Even on failure, we need to remove the run dependency to avoid deadlock
   if (Module && Module.removeRunDependency) {
     console.log('🔧 PRE_WGPU.JS: Removing run dependency due to device creation failure');
@@ -74,7 +74,7 @@ Module.onRuntimeInitialized = (function(originalCallback) {
           console.warn('⚠️ PRE_WGPU.JS: Device import returned null handle after runtime init');
         }
       } catch (err) {
-        console.error('❌ PRE_WGPU.JS: Device import failed after runtime init:', err);
+        console.log('❌ PRE_WGPU.JS: Device import failed after runtime init:', err);
       }
     }
   };
@@ -102,7 +102,7 @@ Module.onRuntimeInitialized = function() {
   createWebGPUDeviceAsync().then(() => {
     console.log('✅ PRE_WGPU.JS: Async device creation completed after runtime init');
   }).catch(err => {
-    console.error('❌ PRE_WGPU.JS: Async device creation failed after runtime init:', err);
+    console.log('❌ PRE_WGPU.JS: Async device creation failed after runtime init:', err);
   });
 
   // Continue with original onRuntimeInitialized regardless
@@ -126,7 +126,7 @@ function createWebGPUDeviceBlocking() {
     console.log('🔍 BLOCKING: Async device creation completed');
     deviceReady = true;
   }).catch(err => {
-    console.error('🔍 BLOCKING: Async device creation failed:', err);
+    console.log('🔍 BLOCKING: Async device creation failed:', err);
     deviceError = err;
     deviceReady = true; // Mark as ready even on error to exit loop
   });
@@ -161,12 +161,12 @@ function createWebGPUDeviceBlocking() {
   }
 
   if (deviceError) {
-    console.error('🔍 BLOCKING: Device creation failed:', deviceError);
+    console.log('🔍 BLOCKING: Device creation failed:', deviceError);
     return false;
   }
 
   if (!deviceReady) {
-    console.error('🔍 BLOCKING: Device creation timed out after 20 seconds');
+    console.log('🔍 BLOCKING: Device creation timed out after 20 seconds');
     return false;
   }
 
@@ -220,12 +220,12 @@ function createWebGPUDeviceSync() {
     }
 
     if (attempts >= maxAttempts) {
-      console.error('🔍 SYNC: Device creation timed out after', maxAttempts * 100, 'ms');
-      console.error('🔍 SYNC: Final state - WebGPU:', !!webgpuDeviceExists, 'Module:', !!moduleDeviceExists, 'asyncComplete:', !!asyncComplete, 'storageComplete:', !!storageComplete);
+      console.log('🔍 SYNC: Device creation timed out after', maxAttempts * 100, 'ms');
+      console.log('🔍 SYNC: Final state - WebGPU:', !!webgpuDeviceExists, 'Module:', !!moduleDeviceExists, 'asyncComplete:', !!asyncComplete, 'storageComplete:', !!storageComplete);
 
       // CRITICAL FIX: If device exists but storage failed, try to force storage completion
       if (asyncComplete && !storageComplete && (webgpuDeviceExists || moduleDeviceExists)) {
-        console.error('🔍 SYNC: Device exists but storage incomplete - forcing storage completion');
+        console.log('🔍 SYNC: Device exists but storage incomplete - forcing storage completion');
         window.webgpuDeviceStorageComplete = true;
       }
 
@@ -247,7 +247,7 @@ function createWebGPUDeviceSync() {
     window.webgpuDeviceCreationComplete = true;
     // Don't set storage complete here - it will be set after actual storage
   }).catch(err => {
-    console.error('🔍 SYNC: Async device creation failed:', err);
+    console.log('🔍 SYNC: Async device creation failed:', err);
     window.webgpuDeviceCreationComplete = true; // Mark as complete even on error
     window.webgpuDeviceStorageComplete = true;
     Module.removeRunDependency('wgpu_device');
@@ -402,7 +402,7 @@ function createWebGPUDeviceAsync() {
               console.warn('🚩 DEBUG: _emscripten_webgpu_get_device not yet available');
             }
           } catch (dbgErr) {
-            console.error('🚩 DEBUG ERROR while probing device handle export:', dbgErr);
+            console.log('🚩 DEBUG ERROR while probing device handle export:', dbgErr);
           }
 
           window.webgpuDeviceStorageComplete = true;
@@ -413,21 +413,21 @@ function createWebGPUDeviceAsync() {
             Module.removeRunDependency('wgpu_device');
           }
         } else {
-          console.error('🔧 FIX ERROR: Some device storage locations are missing');
-          console.error('🔧 FIX ERROR: WebGPU.device:', !!WebGPU.device);
-          console.error('🔧 FIX ERROR: Module.preinitializedWebGPUDevice:', !!Module.preinitializedWebGPUDevice);
-          console.error('🔧 FIX ERROR: Module.webgpu.device:', !!(Module.webgpu && Module.webgpu.device));
+          console.log('🔧 FIX ERROR: Some device storage locations are missing');
+          console.log('🔧 FIX ERROR: WebGPU.device:', !!WebGPU.device);
+          console.log('🔧 FIX ERROR: Module.preinitializedWebGPUDevice:', !!Module.preinitializedWebGPUDevice);
+          console.log('🔧 FIX ERROR: Module.webgpu.device:', !!(Module.webgpu && Module.webgpu.device));
           window.webgpuDeviceStorageComplete = false;
         }
       } catch (err) {
-        console.error('🔧 FIX ERROR: Exception during device storage validation:', err);
+        console.log('🔧 FIX ERROR: Exception during device storage validation:', err);
         window.webgpuDeviceStorageComplete = false;
       }
 
       resolve(); // Success
     } catch (err) {
-      console.error('❌ Failed to obtain WebGPU device (async):', err);
-      console.error('🔄 Engine will fall back to OpenGL compatibility mode');
+      console.log('❌ Failed to obtain WebGPU device (async):', err);
+      console.log('🔄 Engine will fall back to OpenGL compatibility mode');
       window.webgpuDeviceStorageComplete = true; // Mark as complete even on error
       reject(err);
 
@@ -451,7 +451,7 @@ Module.createWebGPUTexture = function(deviceHandle, width, height, depthOrArrayL
     // The deviceHandle from C++ is a pointer, not a JavaScript object handle
     const device = WebGPU.device || Module.preinitializedWebGPUDevice;
     if (!device) {
-      console.error('🔧 JS TEXTURE ERROR: No WebGPU device available');
+      console.log('🔧 JS TEXTURE ERROR: No WebGPU device available');
       return 0;
     }
 
@@ -475,7 +475,7 @@ Module.createWebGPUTexture = function(deviceHandle, width, height, depthOrArrayL
     // Create the texture
     const texture = device.createTexture(textureDescriptor);
     if (!texture) {
-      console.error('🔧 JS TEXTURE ERROR: Failed to create texture');
+      console.log('🔧 JS TEXTURE ERROR: Failed to create texture');
       return 0;
     }
 
@@ -485,7 +485,7 @@ Module.createWebGPUTexture = function(deviceHandle, width, height, depthOrArrayL
     return textureHandle;
 
   } catch (err) {
-    console.error('🔧 JS TEXTURE ERROR: Exception during texture creation:', err);
+    console.log('🔧 JS TEXTURE ERROR: Exception during texture creation:', err);
     return 0;
   }
 };
@@ -500,7 +500,7 @@ Module.createWebGPUBuffer = function(deviceHandle, size, usage, mappedAtCreation
     // Use the pre-stored device
     const device = WebGPU.device || Module.preinitializedWebGPUDevice;
     if (!device) {
-      console.error('🔧 JS BUFFER ERROR: No WebGPU device available');
+      console.log('🔧 JS BUFFER ERROR: No WebGPU device available');
       return 0;
     }
 
@@ -524,7 +524,7 @@ Module.createWebGPUBuffer = function(deviceHandle, size, usage, mappedAtCreation
     // Create the buffer
     const buffer = device.createBuffer(bufferDescriptor);
     if (!buffer) {
-      console.error('🔧 JS BUFFER ERROR: Failed to create buffer');
+      console.log('🔧 JS BUFFER ERROR: Failed to create buffer');
       return 0;
     }
 
@@ -534,7 +534,7 @@ Module.createWebGPUBuffer = function(deviceHandle, size, usage, mappedAtCreation
     return bufferHandle;
 
   } catch (err) {
-    console.error('🔧 JS BUFFER ERROR: Exception during buffer creation:', err);
+    console.log('🔧 JS BUFFER ERROR: Exception during buffer creation:', err);
     return 0;
   }
 };
@@ -549,7 +549,7 @@ Module.createWebGPUSampler = function(deviceHandle, magFilter, minFilter, mipmap
     // Use the pre-stored device
     const device = WebGPU.device || Module.preinitializedWebGPUDevice;
     if (!device) {
-      console.error('🔧 JS SAMPLER ERROR: No WebGPU device available');
+      console.log('🔧 JS SAMPLER ERROR: No WebGPU device available');
       return 0;
     }
 
@@ -571,7 +571,7 @@ Module.createWebGPUSampler = function(deviceHandle, magFilter, minFilter, mipmap
     // Create the sampler
     const sampler = device.createSampler(samplerDescriptor);
     if (!sampler) {
-      console.error('🔧 JS SAMPLER ERROR: Failed to create sampler');
+      console.log('🔧 JS SAMPLER ERROR: Failed to create sampler');
       return 0;
     }
 
@@ -581,7 +581,7 @@ Module.createWebGPUSampler = function(deviceHandle, magFilter, minFilter, mipmap
     return samplerHandle;
 
   } catch (err) {
-    console.error('🔧 JS SAMPLER ERROR: Exception during sampler creation:', err);
+    console.log('🔧 JS SAMPLER ERROR: Exception during sampler creation:', err);
     return 0;
   }
 };
@@ -645,7 +645,7 @@ Module.createWebGPUSampler = function(deviceHandle, magFilter, minFilter, mipmap
         console.log('🔧 PATCH: importJsDevice returned handle:', result);
         return result;
       } catch (err) {
-        console.error('🔧 PATCH: importJsDevice threw error:', err);
+        console.log('🔧 PATCH: importJsDevice threw error:', err);
         return 0;
       }
     };
@@ -728,7 +728,7 @@ Module.__getJsObject = _jsObjectGet;
           return handle;
         }
       } catch (err) {
-        console.error('🕵️ Error in safeGet importJsDevice:', err);
+        console.log('🕵️ Error in safeGet importJsDevice:', err);
       }
     }
     
@@ -812,7 +812,7 @@ function _notifyNativeDeviceReady() {
   Module._webgpu_device_ready = true;
   if (typeof Module._godot_webgpu_device_ready_callback === 'function') {
     console.log('🔔 Calling _godot_webgpu_device_ready_callback');
-    try { Module._godot_webgpu_device_ready_callback(); } catch (e) { console.error('Callback threw', e); }
+    try { Module._godot_webgpu_device_ready_callback(); } catch (e) { console.log('Callback threw', e); }
   }
 }
 
@@ -885,7 +885,7 @@ if (Module.preinitializedWebGPUDevice && Module.preinitializedWebGPUDevice.queue
 
       return origCreate.call(this, sanitized);
     } catch (e) {
-      console.error('🔧 PATCH ERROR: createBuffer sanitize failed', e);
+      console.log('🔧 PATCH ERROR: createBuffer sanitize failed', e);
       // Fallback to original call if something went wrong
       return origCreate.call(this, descriptor);
     }
@@ -908,11 +908,11 @@ if (Module.preinitializedWebGPUDevice && Module.preinitializedWebGPUDevice.queue
     const readyFn = Module._godot_webgpu_device_ready_callback;
     if (typeof setFn === 'function') {
       console.log('🔔 Calling _godot_webgpu_set_device_from_module');
-      try { setFn(); } catch (e) { console.error('set_device callback threw', e); }
+      try { setFn(); } catch (e) { console.log('set_device callback threw', e); }
     }
     if (typeof readyFn === 'function') {
       console.log('🔔 Calling _godot_webgpu_device_ready_callback');
-      try { readyFn(); } catch (e) { console.error('device_ready callback threw', e); }
+      try { readyFn(); } catch (e) { console.log('device_ready callback threw', e); }
     }
     // Call only once
     called = true;
