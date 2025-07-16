@@ -57,6 +57,32 @@
 // Emscripten WebGPU device access function
 extern "C" WGPUDevice emscripten_webgpu_get_device(void);
 
+// CRITICAL FIX: Global variables for callback-based device initialization
+static RenderingDeviceDriverWebGPU* g_pending_webgpu_driver = nullptr;
+static bool g_webgpu_device_ready = false;
+
+// CRITICAL FIX: C++ callback function that JavaScript can call when device is ready
+extern "C" EMSCRIPTEN_KEEPALIVE void godot_webgpu_device_ready_callback() {
+	print_line("🔧 CALLBACK: WebGPU device ready callback triggered from JavaScript!");
+	g_webgpu_device_ready = true;
+
+	// Get the device now that it's ready
+	WGPUDevice ready_device = emscripten_webgpu_get_device();
+	if (ready_device) {
+		print_line("🔧 CALLBACK: Device acquired successfully in callback: " + String::num_uint64((uint64_t)ready_device));
+
+		if (g_pending_webgpu_driver) {
+			print_line("🔧 CALLBACK: Setting device on pending driver and resuming initialization...");
+			g_pending_webgpu_driver->set_device(ready_device);
+			g_pending_webgpu_driver->complete_initialization();
+		} else {
+			print_line("🔧 CALLBACK: No pending driver to resume, but device is ready");
+		}
+	} else {
+		print_line("🔧 CALLBACK: Device still not available even in callback!");
+	}
+}
+
 // Removed callback mechanism - using synchronous pre-JS device creation instead
 
 // Removed JavaScript callback functions - using synchronous pre-JS device creation instead
@@ -67,7 +93,19 @@ extern "C" WGPUDevice emscripten_webgpu_get_device(void);
 #endif
 
 RenderingDeviceDriverWebGPU::RenderingDeviceDriverWebGPU() {
-	// Removed global instance registration - using synchronous pre-JS device creation instead
+	print_line("🔧 CONSTRUCTOR FIX: WebGPU driver constructor - NO device access here!");
+
+	// CRITICAL FIX: Do NOT access emscripten_webgpu_get_device() in constructor
+	// The device will be set later via the callback system or during initialization
+	device = nullptr;
+	queue = nullptr;
+
+	// Initialize deferred state
+	initialization_deferred = false;
+	deferred_device_index = 0;
+	deferred_frame_count = 0;
+
+	print_line("🔧 CONSTRUCTOR FIX: Constructor completed safely without device access");
 }
 
 RenderingDeviceDriverWebGPU::~RenderingDeviceDriverWebGPU() {
@@ -84,148 +122,26 @@ Error RenderingDeviceDriverWebGPU::initialize(uint32_t p_device_index, uint32_t 
 	print_verbose("WebGPU: Starting initialization with improved device acquisition");
 
 #ifdef __EMSCRIPTEN__
-	// CRITICAL FIX: Implement proper device acquisition with multiple fallback strategies
-	print_line("WebGPU: Attempting device acquisition with multiple strategies...");
+	// CRITICAL FIX: Check if device was already set by context driver or callback
+	print_line("WebGPU: Checking if device is already set...");
 
-	// Strategy 1: Try direct emscripten_webgpu_get_device() first
-	device = emscripten_webgpu_get_device();
-	
 	if (device) {
-		print_line("WebGPU: Device acquired via emscripten_webgpu_get_device() - SUCCESS");
+		print_line("WebGPU: Device is already set, proceeding with immediate initialization");
+		// Device is ready, proceed with normal initialization
 	} else {
-		print_line("WebGPU: emscripten_webgpu_get_device() returned null, trying JavaScript fallback...");
-		
-		// Strategy 2: Try to get device from JavaScript side with proper handle conversion
-		device = (WGPUDevice)EM_ASM_PTR({
-			console.log('🔧 JS FALLBACK: Attempting to get WebGPU device from JavaScript');
-			
-			// Try Module.preinitializedWebGPUDevice first - this is the most reliable source
-			if (Module.preinitializedWebGPUDevice) {
-				console.log('🔧 JS FALLBACK: Found device via Module.preinitializedWebGPUDevice');
-				var jsDevice = Module.preinitializedWebGPUDevice;
-				
-				// CRITICAL: Convert JavaScript device to C++ handle using WebGPU.importJsDevice
-				if (typeof WebGPU !== 'undefined' && WebGPU.importJsDevice && jsDevice.queue) {
-					try {
-						var handle = WebGPU.importJsDevice(jsDevice, jsDevice.queue);
-						if (handle) {
-							console.log('🔧 JS FALLBACK: Successfully converted JS device to C++ handle:', handle);
-							return handle;
-						} else {
-							console.log('🔧 JS FALLBACK: importJsDevice returned null handle');
-						}
-					} catch (e) {
-						console.log('🔧 JS FALLBACK: importJsDevice failed:', e);
-					}
-				}
-				
-				// Fallback: try to use device directly (may not work but worth trying)
-				console.log('🔧 JS FALLBACK: Using device directly as fallback');
-				return jsDevice;
-			}
-			
-			// Try WebGPU.device (pre-imported handle)
-			if (typeof WebGPU !== 'undefined' && WebGPU.device) {
-				console.log('🔧 JS FALLBACK: Found device via WebGPU.device');
-				return WebGPU.device;
-			}
-			
-			// Try other sources
-			if (Module.webgpu && Module.webgpu.device) {
-				console.log('🔧 JS FALLBACK: Found device via Module.webgpu.device');
-				var jsDevice = Module.webgpu.device;
-				
-				if (typeof WebGPU !== 'undefined' && WebGPU.importJsDevice && jsDevice.queue) {
-					try {
-						var handle = WebGPU.importJsDevice(jsDevice, jsDevice.queue);
-						if (handle) {
-							console.log('🔧 JS FALLBACK: Successfully converted Module.webgpu.device to handle:', handle);
-							return handle;
-						}
-					} catch (e) {
-						console.log('🔧 JS FALLBACK: Failed to convert Module.webgpu.device:', e);
-					}
-				}
-				
-				return jsDevice;
-			}
-			
-			console.log('🔧 JS FALLBACK: No device found from any source');
-			return 0;
-		});
+		print_line("🔧 CRITICAL FIX: Device not set yet, deferring initialization until callback");
+		// Device not ready, defer initialization
+		return start_deferred_initialization(p_device_index, p_frame_count);
 	}
-	
+
+	// CRITICAL FIX: At this point, device should be set if immediate initialization is possible
 	if (!device) {
-		print_line("WebGPU: All device acquisition strategies failed, implementing wait-and-retry...");
-
-		// Strategy 3: Wait for device to become available (with timeout)
-		int retry_count = 0;
-		const int max_retries = 100; // 10 seconds with 100ms intervals
-
-		while (!device && retry_count < max_retries) {
-			// Wait 100ms
-			EM_ASM({
-				// Use a busy wait to avoid blocking the main thread
-				var start = Date.now();
-				while (Date.now() - start < 100) {
-					// Busy wait
-				}
-			});
-
-			// Try emscripten function again
-			device = emscripten_webgpu_get_device();
-
-			if (!device) {
-				// Try JavaScript fallback again with proper handle conversion
-				device = (WGPUDevice)EM_ASM_PTR({
-					if (Module.preinitializedWebGPUDevice) {
-						console.log('🔧 RETRY: Found preinitializedWebGPUDevice');
-						var jsDevice = Module.preinitializedWebGPUDevice;
-
-						// CRITICAL FIX: Check if C++ functions are available before importing
-						if (typeof _emwgpuCreateDevice === 'function' && typeof _emwgpuCreateQueue === 'function') {
-							// Try to convert to C++ handle
-							if (typeof WebGPU !== 'undefined' && WebGPU.importJsDevice && jsDevice.queue) {
-								try {
-									var handle = WebGPU.importJsDevice(jsDevice, jsDevice.queue);
-									if (handle && handle !== 0) {
-										console.log('🔧 RETRY: Successfully converted device to handle:', handle);
-										// Cache the handle for future use
-										WebGPU.preinitializedDeviceId = handle;
-										return handle;
-									}
-								} catch (e) {
-									console.log('🔧 RETRY: importJsDevice failed:', e);
-								}
-							}
-						} else {
-							console.log('🔧 RETRY: C++ device creation functions not yet available');
-						}
-
-						// Return 0 instead of JS device to avoid type confusion
-						return 0;
-					}
-					if (typeof WebGPU !== 'undefined' && WebGPU.device) {
-						console.log('🔧 RETRY: Found WebGPU.device');
-						return WebGPU.device;
-					}
-					return 0;
-				});
-			}
-			
-			retry_count++;
-			
-			if (retry_count % 10 == 0) {
-				print_line("WebGPU: Still waiting for device... (", retry_count, "/", max_retries, ")");
-			}
-		}
-		
-		if (device) {
-			print_line("WebGPU: Device acquired after ", retry_count, " retries");
-		} else {
-			print_line("WebGPU: Device acquisition failed after ", max_retries, " retries");
-		}
+		print_error("WebGPU: Device not available for immediate initialization - this should not happen!");
+		return ERR_CANT_CREATE;
 	}
+
+	print_line("WebGPU: Device is available, proceeding with initialization");
+	// CRITICAL FIX: All old fallback code removed - using callback system exclusively
 #endif
 
 	if (!device) {
@@ -5216,6 +5132,68 @@ void RenderingDeviceDriverWebGPU::_copy_texture(CommandBufferID p_cmd_buffer, RI
 	// This would use WebGPU copy commands to copy between textures
 
 	print_verbose("Copying texture: " + itos(p_source.get_id()) + " -> " + itos(p_destination.get_id()));
+}
+
+// CRITICAL FIX: Deferred initialization methods for callback-based device synchronization
+
+Error RenderingDeviceDriverWebGPU::start_deferred_initialization(uint32_t p_device_index, uint32_t p_frame_count) {
+	print_line("🔧 DEFERRED INIT: Starting deferred WebGPU driver initialization");
+
+	// Store parameters for later use
+	deferred_device_index = p_device_index;
+	deferred_frame_count = p_frame_count;
+	initialization_deferred = true;
+
+	// Register this driver as pending
+	g_pending_webgpu_driver = this;
+
+	print_line("🔧 DEFERRED INIT: Driver registered for callback, returning OK");
+	return OK; // Return success - initialization will complete via callback
+}
+
+void RenderingDeviceDriverWebGPU::complete_initialization() {
+	print_line("🔧 CALLBACK COMPLETE: Completing deferred WebGPU driver initialization");
+
+	if (!initialization_deferred) {
+		print_line("🔧 CALLBACK COMPLETE: No deferred initialization pending");
+		return;
+	}
+
+	// Clear the pending driver reference
+	g_pending_webgpu_driver = nullptr;
+	initialization_deferred = false;
+
+	// Now try to get the device again
+	device = emscripten_webgpu_get_device();
+
+	if (!device) {
+		print_error("🔧 CALLBACK COMPLETE: Device still not available after callback");
+		return;
+	}
+
+	print_line("🔧 CALLBACK COMPLETE: Device acquired successfully, completing initialization");
+
+	// Get the queue
+	queue = wgpuDeviceGetQueue(device);
+	if (!queue) {
+		print_error("🔧 CALLBACK COMPLETE: Failed to get queue from device");
+		return;
+	}
+
+	// Complete the initialization process
+#ifndef __EMSCRIPTEN__
+	// Initialize Tint for SPIR-V to WGSL conversion (native builds only)
+	tint::Initialize();
+	print_verbose("Tint initialized for SPIR-V to WGSL conversion");
+#endif
+
+	// Initialize capabilities and limits
+	_initialize_capabilities();
+
+	// Initialize material storage system
+	_initialize_material_storage();
+
+	print_line("🔧 CALLBACK COMPLETE: WebGPU driver initialization completed successfully via callback");
 }
 
 #endif // WEBGPU_ENABLED

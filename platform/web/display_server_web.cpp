@@ -1165,8 +1165,17 @@ DisplayServerWeb::DisplayServerWeb(const String &p_rendering_driver, WindowMode 
 			print_error("🚨🚨🚨 VALIDATION #1 RESULT: WebGPU IS supported - proceeding with RenderingDevice system!");
 			print_error("🔧🔧🔧 DISPLAY: WebGPU IS supported by browser, proceeding 🔧🔧🔧");
 			// Initialize WebGPU
+			printf("🚨🚨🚨 VALIDATION #2: About to call godot_js_webgpu_init() - DEVICE CREATION POINT!\n");
+			print_error("🚨🚨🚨 VALIDATION #2: About to call godot_js_webgpu_init() - DEVICE CREATION POINT!");
 			print_line("🔧🔧🔧 DISPLAY: Calling godot_js_webgpu_init 🔧🔧🔧");
-			if (godot_js_webgpu_init(canvas_id)) {
+
+			printf("🚨🚨🚨 VALIDATION #2: Calling godot_js_webgpu_init() NOW...\n");
+			print_error("🚨🚨🚨 VALIDATION #2: Calling godot_js_webgpu_init() NOW...");
+			bool webgpu_init_result = godot_js_webgpu_init(canvas_id);
+			printf("🚨🚨🚨 VALIDATION #2: godot_js_webgpu_init() RETURNED! Result: %s\n", webgpu_init_result ? "true" : "false");
+			print_error("🚨🚨🚨 VALIDATION #2: godot_js_webgpu_init() RETURNED! Result: " + String(webgpu_init_result ? "true" : "false"));
+
+			if (webgpu_init_result) {
 				print_verbose("WebGPU initialized successfully");
 				print_line("🔧🔧🔧 DISPLAY: godot_js_webgpu_init SUCCESS 🔧🔧🔧");
 

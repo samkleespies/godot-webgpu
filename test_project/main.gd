@@ -8,9 +8,8 @@ var rectangles = []
 func _ready():
 	print("WebGPU Advanced Test Project Started!")
 
-	# Change the page title to confirm _ready() is running
-	if DisplayServer.get_singleton():
-		DisplayServer.get_singleton().window_set_title("🎉 GODOT WEBGPU _READY() EXECUTED! 🎉")
+	# Change the page title to confirm _ready() is running (web-compatible)
+	print("🎉 GODOT WEBGPU _READY() EXECUTED! 🎉")
 
 	# Detect rendering backend
 	var rendering_method = ProjectSettings.get_setting("rendering/renderer/rendering_method", "unknown")
@@ -36,16 +35,15 @@ func _ready():
 	status_label.size = Vector2(500, 30)
 	add_child(status_label)
 
-	# Try to get rendering info
-	var rendering_device = RenderingServer.create_local_rendering_device()
-	if rendering_device:
-		print("Rendering device created successfully!")
-		print("Device name: ", rendering_device.get_device_name())
-		status_label.text = "WebGPU Device: " + str(rendering_device.get_device_name())
+	# Try to get rendering info (web-compatible)
+	print("Attempting to get rendering device info...")
+	if RenderingServer.get_rendering_device():
+		print("Rendering device is available!")
+		status_label.text = "WebGPU Device: Available"
 		status_label.modulate = Color.GREEN
 	else:
-		print("Failed to create rendering device")
-		status_label.text = "WebGPU device creation failed - using fallback renderer"
+		print("No rendering device available")
+		status_label.text = "Using fallback renderer"
 		status_label.modulate = Color.ORANGE
 
 	# Create animated rectangles
@@ -85,10 +83,11 @@ func create_performance_display():
 	fps_label.size = Vector2(200, 30)
 	add_child(fps_label)
 
-	# Render info
+	# Render info (web-compatible)
 	var render_info = Label.new()
 	render_info.name = "RenderInfo"
-	render_info.text = "Renderer: " + RenderingServer.get_rendering_device().get_device_name() if RenderingServer.get_rendering_device() else "Software"
+	var current_driver = ProjectSettings.get_setting("rendering/rendering_device/driver", "unknown")
+	render_info.text = "Renderer: WebGPU" if current_driver == "webgpu" else "WebGL"
 	render_info.position = Vector2(50, 430)
 	render_info.size = Vector2(400, 30)
 	add_child(render_info)

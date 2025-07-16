@@ -96,6 +96,11 @@ private:
 	WGPUDevice device = nullptr;
 	WGPUQueue queue = nullptr;
 
+	// CRITICAL FIX: Deferred initialization parameters
+	uint32_t deferred_device_index = 0;
+	uint32_t deferred_frame_count = 0;
+	bool initialization_deferred = false;
+
 	// Removed async state management - using synchronous initialization
 
 	// Command queue management
@@ -497,6 +502,10 @@ private:
 public:
 	// RenderingDeviceDriver interface implementation
 	virtual Error initialize(uint32_t p_device_index, uint32_t p_frame_count) override;
+
+	// CRITICAL FIX: Callback-based initialization methods
+	Error start_deferred_initialization(uint32_t p_device_index, uint32_t p_frame_count);
+	void complete_initialization();
 
 	// WebGPU-specific methods
 	void set_device(WGPUDevice p_device);
