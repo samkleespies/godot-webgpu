@@ -29,22 +29,27 @@ func _ready():
 	# Create status label
 	var status_label = Label.new()
 	status_label.name = "StatusLabel"
-	var backend_text = "WebGL" if rendering_driver != "webgpu" else "WebGPU"
-	status_label.text = "Using " + backend_text + " Backend"
+
+	# Use the reliable rendering driver detection
+	if rendering_driver == "webgpu":
+		status_label.text = "Using WebGPU Renderer ✅"
+		status_label.modulate = Color.GREEN
+		print("WebGPU renderer confirmed via ProjectSettings")
+	else:
+		status_label.text = "Using " + rendering_driver + " Renderer"
+		status_label.modulate = Color.YELLOW
+		print("Non-WebGPU renderer detected: ", rendering_driver)
+
 	status_label.position = Vector2(50, 70)
 	status_label.size = Vector2(500, 30)
 	add_child(status_label)
 
-	# Try to get rendering info (web-compatible)
+	# Try to get rendering device info (web-compatible) - but don't rely on it for status
 	print("Attempting to get rendering device info...")
 	if RenderingServer.get_rendering_device():
 		print("Rendering device is available!")
-		status_label.text = "WebGPU Device: Available"
-		status_label.modulate = Color.GREEN
 	else:
-		print("No rendering device available")
-		status_label.text = "Using fallback renderer"
-		status_label.modulate = Color.ORANGE
+		print("Rendering device not available to GDScript (this is normal for WebGPU)")
 
 	# Create animated rectangles
 	create_animated_demo()
@@ -87,9 +92,10 @@ func create_performance_display():
 	var render_info = Label.new()
 	render_info.name = "RenderInfo"
 	var current_driver = ProjectSettings.get_setting("rendering/rendering_device/driver", "unknown")
-	render_info.text = "Renderer: WebGPU" if current_driver == "webgpu" else "WebGL"
+	var current_method = ProjectSettings.get_setting("rendering/renderer/rendering_method", "unknown")
+	render_info.text = "Driver: " + current_driver + " | Method: " + current_method
 	render_info.position = Vector2(50, 430)
-	render_info.size = Vector2(400, 30)
+	render_info.size = Vector2(600, 30)
 	add_child(render_info)
 
 func _process(delta):

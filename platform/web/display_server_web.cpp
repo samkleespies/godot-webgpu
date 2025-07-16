@@ -1093,11 +1093,23 @@ void DisplayServerWeb::_dispatch_input_event(const Ref<InputEvent> &p_event) {
 DisplayServer *DisplayServerWeb::create_func(const String &p_rendering_driver, WindowMode p_window_mode, VSyncMode p_vsync_mode, uint32_t p_flags, const Point2i *p_position, const Size2i &p_resolution, int p_screen, Context p_context, int64_t p_parent_window, Error &r_error) {
 	printf("🚨🚨🚨 VALIDATION #2: DisplayServerWeb::create_func() CALLED - WebGPU display server creation attempted!\n");
 	printf("🚨🚨🚨 VALIDATION #2: Rendering driver: '%s'\n", p_rendering_driver.utf8().get_data());
+
+	// CRITICAL DEBUG: Add JavaScript console log to see rendering driver parameter
+	EM_ASM({
+		console.log("🔧 CRITICAL DEBUG: DisplayServerWeb::create_func() called with rendering driver: " + UTF8ToString($0));
+	}, p_rendering_driver.utf8().get_data());
+
 	return memnew(DisplayServerWeb(p_rendering_driver, p_window_mode, p_vsync_mode, p_flags, p_position, p_resolution, p_screen, p_context, p_parent_window, r_error));
 }
 
 DisplayServerWeb::DisplayServerWeb(const String &p_rendering_driver, WindowMode p_window_mode, VSyncMode p_vsync_mode, uint32_t p_flags, const Point2i *p_position, const Size2i &p_resolution, int p_screen, Context p_context, int64_t p_parent_window, Error &r_error) {
 	printf("🚨🚨🚨 VALIDATION #2: DisplayServerWeb constructor CALLED - WebGPU display server being created!\n");
+
+	// CRITICAL DEBUG: Add JavaScript console log to see rendering driver parameter in constructor
+	EM_ASM({
+		console.log("🔧 CRITICAL DEBUG: DisplayServerWeb constructor called with rendering driver: " + UTF8ToString($0));
+	}, p_rendering_driver.utf8().get_data());
+
 	r_error = OK; // Always succeeds for now.
 
 	printf("🚨🚨🚨 VALIDATION #2: About to log rendering driver\n");

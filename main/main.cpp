@@ -2580,6 +2580,15 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 		}
 	}
 
+#ifdef WEB_ENABLED
+	// CRITICAL FIX: Force WebGPU driver for web platform
+	// The feature override system may not be working correctly, so force webgpu directly
+	if (rendering_driver.is_empty() || rendering_driver == "vulkan") {
+		print_error("🚨🚨🚨 WEB PLATFORM FIX: Forcing rendering driver to 'webgpu' for web platform");
+		rendering_driver = "webgpu";
+	}
+#endif
+
 	// always convert to lower case for consistency in the code
 	rendering_driver = rendering_driver.to_lower();
 

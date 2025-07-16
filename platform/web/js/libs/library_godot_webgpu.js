@@ -41,10 +41,15 @@ const GodotWebGPU = {
 		},
 
 		init: function(canvasId) {
+			console.log('🔧 CRITICAL DEBUG: GodotWebGPU.init() function CALLED with canvasId:', canvasId);
+
 			if (!GodotWebGPU.isSupported()) {
+				console.log('🔧 CRITICAL DEBUG: WebGPU is NOT supported in this browser');
 				GodotRuntime.error('WebGPU is not supported in this browser');
 				return false;
 			}
+
+			console.log('🔧 CRITICAL DEBUG: WebGPU is supported, proceeding with initialization');
 
 			try {
 				// Remove # prefix if present (canvasId might be "#canvas" or "canvas")
@@ -59,11 +64,16 @@ const GodotWebGPU = {
 
 				GodotRuntime.print('✅ Canvas found with ID:', cleanId);
 
-				// CRITICAL FIX: Start async WebGPU device creation
-				// Since we disabled pre_wgpu.js, we need to create the device here
-				GodotRuntime.print('🔧 CRITICAL FIX: Starting async WebGPU device creation...');
+				// CRITICAL FIX: Create WebGPU device SYNCHRONOUSLY
+				// The display server needs the device to be ready before proceeding
+				GodotRuntime.print('🔧 CRITICAL FIX: Starting SYNCHRONOUS WebGPU device creation...');
 
-				// Start async device creation (don't wait for it)
+				// Use synchronous approach with busy wait
+				let deviceReady = false;
+				let deviceError = null;
+				let createdDevice = null;
+
+				// Start async device creation
 				navigator.gpu.requestAdapter({
 					powerPreference: 'high-performance',
 					forceFallbackAdapter: false
@@ -78,6 +88,7 @@ const GodotWebGPU = {
 					});
 				}).then(device => {
 					GodotRuntime.print('🔧 WebGPU device created successfully');
+					createdDevice = device;
 
 					// Store device in all expected locations
 					GodotWebGPU.device = device;
@@ -101,12 +112,35 @@ const GodotWebGPU = {
 					} else {
 						GodotRuntime.print('🔧 CALLBACK: C++ callback function not available yet');
 					}
+
+					deviceReady = true;
 				}).catch(err => {
 					GodotRuntime.error('Failed to create WebGPU device:', err);
+					deviceError = err;
+					deviceReady = true; // Mark as ready even on error
 				});
 
-				// Return true immediately - C++ will retry until device is ready
-				GodotRuntime.print('✅ WebGPU initialization started (device creation in progress)');
+				// CRITICAL FIX: Wait synchronously for device creation to complete
+				GodotRuntime.print('🔧 SYNC WAIT: Waiting for WebGPU device creation to complete...');
+				const startTime = performance.now();
+				const timeout = 10000; // 10 second timeout
+
+				while (!deviceReady && (performance.now() - startTime) < timeout) {
+					// Busy wait for device creation to complete
+					// This blocks the main thread but ensures device is ready before returning
+				}
+
+				if (deviceError) {
+					GodotRuntime.error('🔧 SYNC WAIT: WebGPU device creation failed:', deviceError);
+					return false;
+				}
+
+				if (!deviceReady || !createdDevice) {
+					GodotRuntime.error('🔧 SYNC WAIT: WebGPU device creation timed out');
+					return false;
+				}
+
+				GodotRuntime.print('✅ WebGPU device created and ready SYNCHRONOUSLY');
 				return true;
 
 			} catch (error) {
@@ -145,8 +179,11 @@ const GodotWebGPU = {
 
 	godot_js_webgpu_init__sig: 'ii',
 	godot_js_webgpu_init: function(canvasIdPtr) {
+		console.log('🔧 CRITICAL DEBUG: godot_js_webgpu_init() JavaScript function CALLED!');
 		const canvasId = GodotRuntime.parseString(canvasIdPtr);
+		console.log('🔧 CRITICAL DEBUG: Canvas ID parsed:', canvasId);
 		const result = GodotWebGPU.init(canvasId);
+		console.log('🔧 CRITICAL DEBUG: GodotWebGPU.init() returned:', result);
 		return result ? 1 : 0;
 	},
 

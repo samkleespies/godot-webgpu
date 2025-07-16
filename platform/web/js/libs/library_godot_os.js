@@ -304,6 +304,10 @@ const GodotOS = {
 	godot_js_os_has_feature: function (p_ftr) {
 		const ftr = GodotRuntime.parseString(p_ftr);
 		const ua = navigator.userAgent;
+		// CRITICAL FIX: Add generic "web" feature for platform-specific settings
+		if (ftr === 'web') {
+			return 1; // Always return true for web platform
+		}
 		if (ftr === 'web_macos') {
 			return (ua.indexOf('Mac') !== -1) ? 1 : 0;
 		}
