@@ -67,13 +67,15 @@ if env["javascript_eval"]:
 if env.get("webgpu", False):
     # SPIR-V to WGSL conversion utilities (must be loaded first)
     sys_env.AddJSPre(["js/spirv_to_wgsl.js"])
-    
-    # WebGPU device creation before main() starts (run-dependency approach)
-    sys_env.AddJSPre(["js/pre_wgpu.js"])
+
+    # DISABLED: WebGPU device creation before main() starts (run-dependency approach)
+    # This was causing deadlocks where the engine would hang waiting for WebGPU device creation
+    # sys_env.AddJSPre(["js/pre_wgpu.js"])
+    print("[FIX] Disabled pre_wgpu.js to prevent WebGPU initialization deadlocks")
 
     # Main WebGPU runtime helpers (linked as a normal JS library)
     sys_env.AddJSLibraries(["js/libs/library_godot_webgpu.js"])
-    # Removed callback function exports - using synchronous pre-JS device creation instead
+    # Using normal WebGPU initialization through godot_js_webgpu_is_supported() and godot_js_webgpu_init()
 
 for lib in sys_env["JS_LIBS"]:
     sys_env.Append(LINKFLAGS=["--js-library", lib.abspath])

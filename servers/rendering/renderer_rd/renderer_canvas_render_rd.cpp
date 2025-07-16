@@ -462,7 +462,19 @@ RID RendererCanvasRenderRD::_create_base_uniform_set(RID p_to_render_target, boo
 
 	material_storage->samplers_rd_get_default().append_uniforms(uniforms, SAMPLERS_BINDING_FIRST_INDEX);
 
+	printf("🚨🚨🚨 VALIDATION #4: About to create BASE uniform set - shader: %llu, uniforms count: %u\n", shader.default_version_rd_shader.get_id(), (uint32_t)uniforms.size());
+	print_error("🚨🚨🚨 VALIDATION #4: About to create BASE uniform set - shader: " + itos(shader.default_version_rd_shader.get_id()) + ", uniforms count: " + itos(uniforms.size()));
+
 	RID uniform_set = RD::get_singleton()->uniform_set_create(uniforms, shader.default_version_rd_shader, BASE_UNIFORM_SET);
+
+	if (uniform_set.is_valid()) {
+		printf("🚨🚨🚨 VALIDATION #4: SUCCESS - BASE uniform set created successfully: %llu\n", uniform_set.get_id());
+		print_error("🚨🚨🚨 VALIDATION #4: SUCCESS - BASE uniform set created successfully: " + itos(uniform_set.get_id()));
+	} else {
+		printf("🚨🚨🚨 VALIDATION #4: ERROR - BASE uniform set creation FAILED!\n");
+		print_error("🚨🚨🚨 VALIDATION #4: ERROR - BASE uniform set creation FAILED!");
+	}
+
 	if (p_backbuffer) {
 		texture_storage->render_target_set_backbuffer_uniform_set(p_to_render_target, uniform_set);
 	} else {
@@ -1742,24 +1754,40 @@ void RendererCanvasRenderRD::update() {
 RendererCanvasRenderRD::RendererCanvasRenderRD() {
 	// Use multiple logging methods for early logging that works before Godot's logging system is ready
 #ifdef __EMSCRIPTEN__
-	emscripten_console_log("🔧🔧🔧 CANVAS CONSTRUCTOR: RendererCanvasRenderRD constructor starting 🔧🔧🔧");
+	emscripten_console_log("🚨🚨🚨 VALIDATION #3: RendererCanvasRenderRD constructor starting - CANVAS RENDERER IS BEING CREATED!");
 #endif
-	printf("🔧🔧🔧 CANVAS CONSTRUCTOR: RendererCanvasRenderRD constructor starting 🔧🔧🔧\n");
-	print_error("🔧🔧🔧 CANVAS CONSTRUCTOR: RendererCanvasRenderRD constructor starting 🔧🔧🔧");
-	print_line("🔧🔧🔧 CANVAS CONSTRUCTOR: RendererCanvasRenderRD constructor starting 🔧🔧🔧");
+	printf("🚨🚨🚨 VALIDATION #3: RendererCanvasRenderRD constructor starting - CANVAS RENDERER IS BEING CREATED!\n");
+	print_error("🚨🚨🚨 VALIDATION #3: RendererCanvasRenderRD constructor starting - CANVAS RENDERER IS BEING CREATED!");
+	print_line("🚨🚨🚨 VALIDATION #3: RendererCanvasRenderRD constructor starting - CANVAS RENDERER IS BEING CREATED!");
+	printf("🚨🚨🚨 VALIDATION #4: Getting texture storage singleton\n");
+	print_error("🚨🚨🚨 VALIDATION #4: Getting texture storage singleton");
 	RendererRD::TextureStorage *texture_storage = RendererRD::TextureStorage::get_singleton();
+	printf("🚨🚨🚨 VALIDATION #4: Getting material storage singleton\n");
+	print_error("🚨🚨🚨 VALIDATION #4: Getting material storage singleton");
 	RendererRD::MaterialStorage *material_storage = RendererRD::MaterialStorage::get_singleton();
+	printf("🚨🚨🚨 VALIDATION #4: Got storage singletons successfully\n");
+	print_error("🚨🚨🚨 VALIDATION #4: Got storage singletons successfully");
 
 	{ //create default samplers
+		printf("🚨🚨🚨 VALIDATION #4: Creating default samplers\n");
+		print_error("🚨🚨🚨 VALIDATION #4: Creating default samplers");
 
 		default_samplers.default_filter = RS::CANVAS_ITEM_TEXTURE_FILTER_LINEAR;
 		default_samplers.default_repeat = RS::CANVAS_ITEM_TEXTURE_REPEAT_DISABLED;
+		printf("🚨🚨🚨 VALIDATION #4: Default samplers created\n");
+		print_error("🚨🚨🚨 VALIDATION #4: Default samplers created");
 	}
 
 	// preallocate 5 slots for uniform set 3
+	printf("🚨🚨🚨 VALIDATION #4: Resizing batch texture uniforms\n");
+	print_error("🚨🚨🚨 VALIDATION #4: Resizing batch texture uniforms");
 	state.batch_texture_uniforms.resize(5);
+	printf("🚨🚨🚨 VALIDATION #4: Batch texture uniforms resized\n");
+	print_error("🚨🚨🚨 VALIDATION #4: Batch texture uniforms resized");
 
 	{ //shader variants
+		printf("🚨🚨🚨 VALIDATION #4: Reached shader variants section in constructor\n");
+		print_error("🚨🚨🚨 VALIDATION #4: Reached shader variants section in constructor");
 
 		String global_defines;
 		global_defines += "#define MAX_LIGHTS " + itos(MAX_LIGHTS_PER_RENDER) + "\n";
@@ -1779,11 +1807,15 @@ RendererCanvasRenderRD::RendererCanvasRenderRD() {
 		}
 
 		// Use multiple logging methods for early logging that works before Godot's logging system is ready
+		printf("🚨🚨🚨 VALIDATION #4: About to initialize canvas shader with %d variants\n", (int)variants.size());
+		print_error("🚨🚨🚨 VALIDATION #4: About to initialize canvas shader with " + itos(variants.size()) + " variants");
 #ifdef __EMSCRIPTEN__
 		emscripten_console_log("🔧 CANVAS SHADER: Initializing canvas shader");
 #endif
 		printf("🔧 CANVAS SHADER: Initializing canvas shader with %d variants\n", (int)variants.size());
 		shader.canvas_shader.initialize(variants, global_defines);
+		printf("🚨🚨🚨 VALIDATION #4: Canvas shader initialize() completed\n");
+		print_error("🚨🚨🚨 VALIDATION #4: Canvas shader initialize() completed");
 #ifdef __EMSCRIPTEN__
 		emscripten_console_log("🔧 CANVAS SHADER: Canvas shader initialized, creating default version data");
 #endif
@@ -3063,7 +3095,19 @@ void RendererCanvasRenderRD::_render_batch(RD::DrawListID p_draw_list, CanvasSha
 			uniform_ptrw[3] = RD::Uniform(RD::UNIFORM_TYPE_SAMPLER, 3, p_batch->tex_info->sampler);
 			uniform_ptrw[4] = RD::Uniform(RD::UNIFORM_TYPE_STORAGE_BUFFER, 4, state.canvas_instance_data_buffers[state.current_data_buffer_index].instance_buffers[p_batch->instance_buffer_index]);
 
+			printf("🚨🚨🚨 VALIDATION #4: About to create BATCH uniform set - shader: %llu, uniforms count: %u\n", shader.default_version_rd_shader.get_id(), (uint32_t)state.batch_texture_uniforms.size());
+			print_error("🚨🚨🚨 VALIDATION #4: About to create BATCH uniform set - shader: " + itos(shader.default_version_rd_shader.get_id()) + ", uniforms count: " + itos(state.batch_texture_uniforms.size()));
+
 			RID rid = RD::get_singleton()->uniform_set_create(state.batch_texture_uniforms, shader.default_version_rd_shader, BATCH_UNIFORM_SET);
+
+			if (rid.is_valid()) {
+				printf("🚨🚨🚨 VALIDATION #4: SUCCESS - BATCH uniform set created successfully: %llu\n", rid.get_id());
+				print_error("🚨🚨🚨 VALIDATION #4: SUCCESS - BATCH uniform set created successfully: " + itos(rid.get_id()));
+			} else {
+				printf("🚨🚨🚨 VALIDATION #4: ERROR - BATCH uniform set creation FAILED!\n");
+				print_error("🚨🚨🚨 VALIDATION #4: ERROR - BATCH uniform set creation FAILED!");
+			}
+
 			ERR_FAIL_COND_MSG(rid.is_null(), "Failed to create uniform set for batch.");
 
 			const RIDCache::Pair *iter = rid_set_to_uniform_set.insert(key, rid);

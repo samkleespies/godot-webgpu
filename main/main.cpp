@@ -2939,6 +2939,7 @@ Error _parse_resource_dummy(void *p_data, VariantParser::Stream *p_stream, Ref<R
 
 Error Main::setup2(bool p_show_boot_logo) {
 	printf("🚨🚨🚨 VALIDATION #2: Main::setup2() CALLED - display server creation should happen here!\n");
+	print_error("🚨🚨🚨 VALIDATION #2: Main::setup2() CALLED - display server creation should happen here!");
 	OS::get_singleton()->benchmark_begin_measure("Startup", "Main::Setup2");
 
 	Thread::make_main_thread(); // Make whatever thread call this the main thread.
@@ -3402,8 +3403,12 @@ Error Main::setup2(bool p_show_boot_logo) {
 	}
 
 	/* Initialize Pen Tablet Driver */
+	printf("🚨🚨🚨 VALIDATION #2: Reached tablet driver initialization section\n");
+	print_error("🚨🚨🚨 VALIDATION #2: Reached tablet driver initialization section");
 
 	{
+		printf("🚨🚨🚨 VALIDATION #2: About to begin tablet driver benchmark\n");
+		print_error("🚨🚨🚨 VALIDATION #2: About to begin tablet driver benchmark");
 		OS::get_singleton()->benchmark_begin_measure("Servers", "Tablet Driver");
 
 		GLOBAL_DEF_RST_NOVAL("input_devices/pen_tablet/driver", "");
@@ -3436,16 +3441,28 @@ Error Main::setup2(bool p_show_boot_logo) {
 		print_verbose("Using \"" + DisplayServer::get_singleton()->tablet_get_current_driver() + "\" pen tablet driver...");
 
 		OS::get_singleton()->benchmark_end_measure("Servers", "Tablet Driver");
+		printf("🚨🚨🚨 VALIDATION #2: Tablet driver benchmark ended\n");
+		print_error("🚨🚨🚨 VALIDATION #2: Tablet driver benchmark ended");
 	}
 
+	printf("🚨🚨🚨 VALIDATION #2: Reached rendering server initialization section - CRITICAL CHECKPOINT!\n");
+	print_error("🚨🚨🚨 VALIDATION #2: Reached rendering server initialization section - CRITICAL CHECKPOINT!");
+
 	/* Initialize Rendering Server */
+	printf("🚨🚨🚨 VALIDATION #2: Inside rendering server comment block\n");
+	print_error("🚨🚨🚨 VALIDATION #2: Inside rendering server comment block");
 
 	{
+		printf("🚨🚨🚨 VALIDATION #2: About to initialize rendering server - THIS IS THE CRITICAL POINT!\n");
+		print_error("🚨🚨🚨 VALIDATION #2: About to initialize rendering server - THIS IS THE CRITICAL POINT!");
 		OS::get_singleton()->benchmark_begin_measure("Servers", "Rendering");
 
+		printf("🚨🚨🚨 VALIDATION #2: Creating RenderingServerDefault...\n");
 		rendering_server = memnew(RenderingServerDefault(OS::get_singleton()->is_separate_thread_rendering_enabled()));
+		printf("🚨🚨🚨 VALIDATION #2: RenderingServerDefault created, calling init()...\n");
 
 		rendering_server->init();
+		printf("🚨🚨🚨 VALIDATION #2: rendering_server->init() completed!\n");
 		//rendering_server->call_set_use_vsync(OS::get_singleton()->_use_vsync);
 		rendering_server->set_render_loop_enabled(!disable_render_loop);
 
@@ -4180,7 +4197,10 @@ int Main::start() {
 #endif // TOOLS_ENABLED
 
 	if (script.is_empty() && game_path.is_empty()) {
-		game_path = ResourceUID::ensure_path(GLOBAL_GET("application/run/main_scene"));
+		String main_scene_setting = GLOBAL_GET("application/run/main_scene");
+		printf("🚨🚨🚨 VALIDATION #1: MAIN SCENE - application/run/main_scene setting: '%s'\n", main_scene_setting.utf8().get_data());
+		game_path = ResourceUID::ensure_path(main_scene_setting);
+		printf("🚨🚨🚨 VALIDATION #1: MAIN SCENE - game_path after ResourceUID::ensure_path: '%s'\n", game_path.utf8().get_data());
 	}
 
 #ifdef TOOLS_ENABLED
@@ -4591,15 +4611,26 @@ int Main::start() {
 			// Load SSL Certificates from Project Settings (or builtin).
 			Crypto::load_default_certificates(GLOBAL_GET("network/tls/certificate_bundle_override"));
 
+			printf("🚨🚨🚨 VALIDATION #1: SCENE LOADING - game_path: '%s'\n", game_path.utf8().get_data());
+			printf("🚨🚨🚨 VALIDATION #1: SCENE LOADING - local_game_path: '%s'\n", local_game_path.utf8().get_data());
+
 			if (!game_path.is_empty()) {
+				printf("🚨🚨🚨 VALIDATION #1: SCENE LOADING - About to load scene from: '%s'\n", local_game_path.utf8().get_data());
 				Node *scene = nullptr;
 				Ref<PackedScene> scenedata = ResourceLoader::load(local_game_path);
+				printf("🚨🚨🚨 VALIDATION #1: SCENE LOADING - ResourceLoader::load returned, scenedata.is_valid(): %s\n", scenedata.is_valid() ? "true" : "false");
 				if (scenedata.is_valid()) {
+					printf("🚨🚨🚨 VALIDATION #1: SCENE LOADING - About to instantiate scene\n");
 					scene = scenedata->instantiate();
+					printf("🚨🚨🚨 VALIDATION #1: SCENE LOADING - Scene instantiated, scene pointer: %p\n", scene);
+				} else {
+					printf("🚨🚨🚨 VALIDATION #1: SCENE LOADING ERROR - Failed to load scene data from: '%s'\n", local_game_path.utf8().get_data());
 				}
 
 				ERR_FAIL_NULL_V_MSG(scene, EXIT_FAILURE, "Failed loading scene: " + local_game_path + ".");
+				printf("🚨🚨🚨 VALIDATION #1: SCENE LOADING - About to add scene to SceneTree\n");
 				sml->add_current_scene(scene);
+				printf("🚨🚨🚨 VALIDATION #1: SCENE LOADING - Scene added to SceneTree successfully!\n");
 
 #ifdef MACOS_ENABLED
 				String mac_icon_path = GLOBAL_GET("application/config/macos_native_icon");

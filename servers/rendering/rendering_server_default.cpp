@@ -214,9 +214,20 @@ bool RenderingServerDefault::has_changed() const {
 }
 
 void RenderingServerDefault::_init() {
-	RSG::threaded = create_thread;
+	printf("🚨🚨🚨 VALIDATION #3: _init() FUNCTION ENTRY - first line reached!\n");
+	print_error("🚨🚨🚨 VALIDATION #3: _init() FUNCTION ENTRY - first line reached!");
 
+	printf("🚨🚨🚨 VALIDATION #3: About to set RSG::threaded\n");
+	print_error("🚨🚨🚨 VALIDATION #3: About to set RSG::threaded");
+	RSG::threaded = create_thread;
+	printf("🚨🚨🚨 VALIDATION #3: RSG::threaded set to: %s\n", create_thread ? "true" : "false");
+	print_error("🚨🚨🚨 VALIDATION #3: RSG::threaded set successfully");
+
+	printf("🚨🚨🚨 VALIDATION #3: About to print starting message\n");
+	print_error("🚨🚨🚨 VALIDATION #3: About to print starting message");
 	print_line("🔧🔧🔧 RSG: Starting rendering server initialization 🔧🔧🔧");
+	printf("🚨🚨🚨 VALIDATION #3: Starting message printed\n");
+	print_error("🚨🚨🚨 VALIDATION #3: Starting message printed");
 	RSG::canvas = memnew(RendererCanvasCull);
 	RSG::viewport = memnew(RendererViewport);
 	RendererSceneCull *sr = memnew(RendererSceneCull);
@@ -258,18 +269,28 @@ void RenderingServerDefault::_finish() {
 }
 
 void RenderingServerDefault::init() {
+	printf("🚨🚨🚨 VALIDATION #3: RenderingServerDefault::init() CALLED - create_thread: %s\n", create_thread ? "true" : "false");
+	print_error("🚨🚨🚨 VALIDATION #3: RenderingServerDefault::init() CALLED - create_thread: " + String(create_thread ? "true" : "false"));
 	if (create_thread) {
+		printf("🚨🚨🚨 VALIDATION #3: Using THREADED rendering server - creating worker thread\n");
+		print_error("🚨🚨🚨 VALIDATION #3: Using THREADED rendering server - creating worker thread");
 		print_verbose("RenderingServerWrapMT: Starting render thread");
 		DisplayServer::get_singleton()->release_rendering_thread();
 		WorkerThreadPool::TaskID tid = WorkerThreadPool::get_singleton()->add_task(callable_mp(this, &RenderingServerDefault::_thread_loop), true);
 		command_queue.set_pump_task_id(tid);
 		command_queue.push(this, &RenderingServerDefault::_assign_mt_ids, tid);
+		printf("🚨🚨🚨 VALIDATION #3: About to call command_queue.push_and_sync for _init\n");
 		command_queue.push_and_sync(this, &RenderingServerDefault::_init);
+		printf("🚨🚨🚨 VALIDATION #3: command_queue.push_and_sync for _init completed\n");
 		DEV_ASSERT(server_task_id == tid);
 	} else {
+		printf("🚨🚨🚨 VALIDATION #3: Using DIRECT rendering server - calling _init() directly\n");
+		print_error("🚨🚨🚨 VALIDATION #3: Using DIRECT rendering server - calling _init() directly");
 		server_thread = Thread::MAIN_ID;
 		_init();
+		printf("🚨🚨🚨 VALIDATION #3: _init() completed successfully\n");
 	}
+	printf("🚨🚨🚨 VALIDATION #3: RenderingServerDefault::init() COMPLETED\n");
 }
 
 void RenderingServerDefault::finish() {

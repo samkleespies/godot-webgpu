@@ -8,6 +8,10 @@ var rectangles = []
 func _ready():
 	print("WebGPU Advanced Test Project Started!")
 
+	# Change the page title to confirm _ready() is running
+	if DisplayServer.get_singleton():
+		DisplayServer.get_singleton().window_set_title("🎉 GODOT WEBGPU _READY() EXECUTED! 🎉")
+
 	# Detect rendering backend
 	var rendering_method = ProjectSettings.get_setting("rendering/renderer/rendering_method", "unknown")
 	var rendering_driver = ProjectSettings.get_setting("rendering/rendering_device/driver", "unknown")

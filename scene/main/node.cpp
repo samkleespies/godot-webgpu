@@ -240,6 +240,7 @@ void Node::_notification(int p_notification) {
 		} break;
 
 		case NOTIFICATION_READY: {
+			printf("🚨🚨🚨 VALIDATION #1: NOTIFICATION_READY received by node: '%s' (class: %s)\n", String(get_name()).utf8().get_data(), String(get_class()).utf8().get_data());
 			if (GDVIRTUAL_IS_OVERRIDDEN(_input)) {
 				set_process_input(true);
 			}
@@ -263,7 +264,9 @@ void Node::_notification(int p_notification) {
 				set_physics_process(true);
 			}
 
+			printf("🚨🚨🚨 VALIDATION #1: About to call GDVIRTUAL_CALL(_ready) on node: '%s'\n", String(get_name()).utf8().get_data());
 			GDVIRTUAL_CALL(_ready);
+			printf("🚨🚨🚨 VALIDATION #1: GDVIRTUAL_CALL(_ready) completed on node: '%s'\n", String(get_name()).utf8().get_data());
 		} break;
 
 		case NOTIFICATION_PREDELETE: {
@@ -302,6 +305,7 @@ void Node::_notification(int p_notification) {
 }
 
 void Node::_propagate_ready() {
+	printf("🚨🚨🚨 VALIDATION #1: _propagate_ready() called on node: '%s' (class: %s)\n", String(get_name()).utf8().get_data(), String(get_class()).utf8().get_data());
 	data.ready_notified = true;
 	data.blocked++;
 	for (KeyValue<StringName, Node *> &K : data.children) {
@@ -313,9 +317,12 @@ void Node::_propagate_ready() {
 	notification(NOTIFICATION_POST_ENTER_TREE);
 
 	if (data.ready_first) {
+		printf("🚨🚨🚨 VALIDATION #1: About to call NOTIFICATION_READY on node: '%s'\n", String(get_name()).utf8().get_data());
 		data.ready_first = false;
 		notification(NOTIFICATION_READY);
+		printf("🚨🚨🚨 VALIDATION #1: NOTIFICATION_READY completed on node: '%s'\n", String(get_name()).utf8().get_data());
 		emit_signal(SceneStringName(ready));
+		printf("🚨🚨🚨 VALIDATION #1: ready signal emitted on node: '%s'\n", String(get_name()).utf8().get_data());
 	}
 }
 

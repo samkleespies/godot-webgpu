@@ -1132,15 +1132,27 @@ DisplayServerWeb::DisplayServerWeb(const String &p_rendering_driver, WindowMode 
 
 #ifdef WEBGPU_ENABLED
 	printf("🚨🚨🚨 VALIDATION #2: Checking if rendering driver is webgpu\n");
+	printf("🚨🚨🚨 VALIDATION #2: Actual rendering driver value: '%s'\n", p_rendering_driver.utf8().get_data());
+	print_error("🚨🚨🚨 VALIDATION #2: Actual rendering driver value: '" + p_rendering_driver + "'");
 	if (p_rendering_driver == "webgpu") {
 		printf("🚨🚨🚨 VALIDATION #2: WebGPU rendering driver confirmed, starting WebGPU initialization\n");
+		print_error("🚨🚨🚨 VALIDATION #2: WebGPU rendering driver confirmed, starting WebGPU initialization");
 		print_verbose("WebGPU rendering driver selected");
 		print_line("🔧🔧🔧 DISPLAY: WebGPU rendering driver selected, starting initialization 🔧🔧🔧");
 
 		// Check if WebGPU is supported
+		printf("🚨🚨🚨 VALIDATION #2: About to call godot_js_webgpu_is_supported() - CRITICAL HANG POINT!\n");
+		print_error("🚨🚨🚨 VALIDATION #2: About to call godot_js_webgpu_is_supported() - CRITICAL HANG POINT!");
 		print_error("🚨🚨🚨 VALIDATION #1: Checking WebGPU browser support - this determines which rendering system is used!");
 		print_error("🔧🔧🔧 DISPLAY: Checking WebGPU browser support 🔧🔧🔧");
-		if (!godot_js_webgpu_is_supported()) {
+
+		printf("🚨🚨🚨 VALIDATION #2: Calling godot_js_webgpu_is_supported() NOW...\n");
+		print_error("🚨🚨🚨 VALIDATION #2: Calling godot_js_webgpu_is_supported() NOW...");
+		bool webgpu_supported = godot_js_webgpu_is_supported();
+		printf("🚨🚨🚨 VALIDATION #2: godot_js_webgpu_is_supported() RETURNED! Result: %s\n", webgpu_supported ? "true" : "false");
+		print_error("🚨🚨🚨 VALIDATION #2: godot_js_webgpu_is_supported() RETURNED! Result: " + String(webgpu_supported ? "true" : "false"));
+
+		if (!webgpu_supported) {
 			print_error("🚨🚨🚨 VALIDATION #1 RESULT: WebGPU NOT supported - falling back to RasterizerDummy (this explains missing shader creation!)");
 			print_error("🔧🔧🔧 DISPLAY: WebGPU NOT supported by browser 🔧🔧🔧");
 			OS::get_singleton()->alert(
@@ -1239,6 +1251,11 @@ DisplayServerWeb::DisplayServerWeb(const String &p_rendering_driver, WindowMode 
 				print_line("🔧🔧🔧 DISPLAY: Fallback to RasterizerDummy (webgpu init failed) 🔧🔧🔧");
 			}
 		}
+	} else {
+		printf("🚨🚨🚨 VALIDATION #2: WebGPU rendering driver NOT selected - driver is '%s', not 'webgpu'\n", p_rendering_driver.utf8().get_data());
+		print_error("🚨🚨🚨 VALIDATION #2: WebGPU rendering driver NOT selected - driver is '" + p_rendering_driver + "', not 'webgpu'");
+		printf("🚨🚨🚨 VALIDATION #2: This explains why WebGPU initialization is not happening!\n");
+		print_error("🚨🚨🚨 VALIDATION #2: This explains why WebGPU initialization is not happening!");
 	}
 #endif
 

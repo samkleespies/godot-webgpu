@@ -331,11 +331,11 @@ RendererCompositorRD::RendererCompositorRD() {
 	particles_storage = memnew(RendererRD::ParticlesStorage);
 	fog = memnew(RendererRD::Fog);
 #ifdef __EMSCRIPTEN__
-	emscripten_console_log("🔧🔧🔧 COMPOSITOR: About to create RendererCanvasRenderRD 🔧🔧🔧");
+	emscripten_console_log("🚨🚨🚨 VALIDATION #3: About to create RendererCanvasRenderRD - COMPOSITOR IS WORKING!");
 #endif
-	printf("🔧🔧🔧 COMPOSITOR: About to create RendererCanvasRenderRD 🔧🔧🔧\n");
-	print_error("🔧🔧🔧 COMPOSITOR: About to create RendererCanvasRenderRD 🔧🔧🔧");
-	print_line("🔧🔧🔧 COMPOSITOR: About to create RendererCanvasRenderRD 🔧🔧🔧");
+	printf("🚨🚨🚨 VALIDATION #3: About to create RendererCanvasRenderRD - COMPOSITOR IS WORKING!\n");
+	print_error("🚨🚨🚨 VALIDATION #3: About to create RendererCanvasRenderRD - COMPOSITOR IS WORKING!");
+	print_line("🚨🚨🚨 VALIDATION #3: About to create RendererCanvasRenderRD - COMPOSITOR IS WORKING!");
 	canvas = memnew(RendererCanvasRenderRD());
 #ifdef __EMSCRIPTEN__
 	emscripten_console_log("🔧🔧🔧 COMPOSITOR: RendererCanvasRenderRD created successfully 🔧🔧🔧");

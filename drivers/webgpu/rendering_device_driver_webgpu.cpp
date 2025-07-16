@@ -1571,8 +1571,12 @@ uint64_t RenderingDeviceDriverWebGPU::buffer_get_device_address(BufferID p_buffe
 // ----- UNIFORM SET IMPLEMENTATION -----
 
 RenderingDeviceDriver::UniformSetID RenderingDeviceDriverWebGPU::uniform_set_create(VectorView<BoundUniform> p_uniforms, ShaderID p_shader, uint32_t p_set_index, int p_linear_pool_index) {
+	printf("🚨🚨🚨 VALIDATION #4: uniform_set_create() CALLED - shader ID: %llu, set index: %u, uniforms count: %u\n", (uint64_t)p_shader.id, p_set_index, (uint32_t)p_uniforms.size());
+	print_error("🚨🚨🚨 VALIDATION #4: uniform_set_create() CALLED - shader ID: " + itos((uint64_t)p_shader.id) + ", set index: " + itos(p_set_index) + ", uniforms count: " + itos(p_uniforms.size()));
+
 	if (!device) {
-		print_error("WebGPU device not initialized");
+		printf("🚨🚨🚨 VALIDATION #4: UNIFORM SET ERROR - WebGPU device not initialized!\n");
+		print_error("🚨🚨🚨 VALIDATION #4: UNIFORM SET ERROR - WebGPU device not initialized!");
 		return RenderingDeviceDriver::UniformSetID();
 	}
 
@@ -1580,11 +1584,14 @@ RenderingDeviceDriver::UniformSetID RenderingDeviceDriverWebGPU::uniform_set_cre
 
 	ShaderInfo *shader_info = (ShaderInfo *)p_shader.id;
 	if (!shader_info) {
-		print_error("🔧 UNIFORM SET ERROR: Invalid shader - shader_info is null for ID: " + itos((uint64_t)p_shader.id));
-		print_error("🔧 UNIFORM SET ERROR: This indicates shader creation failed or shader was freed");
-		print_error("🔧 UNIFORM SET ERROR: Shader creation pipeline may have failed during initialization");
+		printf("🚨🚨🚨 VALIDATION #4: UNIFORM SET ERROR - shader_info is null for ID: %llu\n", (uint64_t)p_shader.id);
+		print_error("🚨🚨🚨 VALIDATION #4: UNIFORM SET ERROR - Invalid shader - shader_info is null for ID: " + itos((uint64_t)p_shader.id));
+		print_error("🚨🚨🚨 VALIDATION #4: UNIFORM SET ERROR - This indicates shader creation failed or shader was freed");
+		print_error("🚨🚨🚨 VALIDATION #4: UNIFORM SET ERROR - Shader creation pipeline may have failed during initialization");
 		return RenderingDeviceDriver::UniformSetID();
 	}
+
+	printf("🚨🚨🚨 VALIDATION #4: shader_info is valid, proceeding with uniform set creation\n");
 
 	// Create uniform set info
 	UniformSetInfo *uniform_set_info = uniform_set_allocator.alloc();
@@ -1772,11 +1779,14 @@ RenderingDeviceDriver::UniformSetID RenderingDeviceDriverWebGPU::uniform_set_cre
 	wgpuBindGroupLayoutRelease(bind_group_layout);
 
 	if (!uniform_set_info->bind_group) {
-		print_error("Failed to create WebGPU bind group");
+		printf("🚨🚨🚨 VALIDATION #4: UNIFORM SET ERROR - Failed to create WebGPU bind group!\n");
+		print_error("🚨🚨🚨 VALIDATION #4: UNIFORM SET ERROR - Failed to create WebGPU bind group!");
 		uniform_set_allocator.free(uniform_set_info);
 		return RenderingDeviceDriver::UniformSetID();
 	}
 
+	printf("🚨🚨🚨 VALIDATION #4: SUCCESS - Created WebGPU uniform set with %u uniforms\n", (uint32_t)p_uniforms.size());
+	print_error("🚨🚨🚨 VALIDATION #4: SUCCESS - Created WebGPU uniform set with " + itos(p_uniforms.size()) + " uniforms");
 	print_verbose("Created WebGPU uniform set with " + itos(p_uniforms.size()) + " uniforms");
 
 	return RenderingDeviceDriver::UniformSetID(uniform_set_info);
@@ -4043,11 +4053,12 @@ String RenderingDeviceDriverWebGPU::_convert_spirv_to_wgsl(const Vector<uint8_t>
 	}
 #else
 	// Use JavaScript-based SPIR-V to WGSL conversion for Emscripten builds
-	print_verbose("🔧 SPIRV->WGSL: Using JavaScript-based SPIR-V to WGSL conversion for Emscripten build");
+	print_error("🚨🚨🚨 VALIDATION #2: Using JavaScript-based SPIR-V to WGSL conversion for Emscripten build");
+	print_error("🚨🚨🚨 VALIDATION #2: CRITICAL DISCOVERY - Using FALLBACK shaders instead of real SPIR-V conversion!");
 
 	// For now, use improved fallback shaders that are more compatible with Godot's expectations
 	String wgsl_source;
-	print_verbose("🔧 SPIRV->WGSL: Generating fallback shader for stage: " + String(RenderingDeviceCommons::SHADER_STAGE_NAMES[p_stage]));
+	print_error("🚨🚨🚨 VALIDATION #2: Generating fallback shader for stage: " + String(RenderingDeviceCommons::SHADER_STAGE_NAMES[p_stage]));
 	switch (p_stage) {
 		case RenderingDeviceCommons::SHADER_STAGE_VERTEX:
 			wgsl_source = R"(
@@ -4083,8 +4094,9 @@ fn cs_main(@builtin(global_invocation_id) global_id: vec3<u32>) {
 			return String();
 	}
 
-	print_verbose("🔧 SPIRV->WGSL: Generated improved fallback WGSL shader for stage: " + String(RenderingDeviceCommons::SHADER_STAGE_NAMES[p_stage]));
-	print_verbose("🔧 SPIRV->WGSL: Fallback shader length: " + itos(wgsl_source.length()));
+	print_error("🚨🚨🚨 VALIDATION #2: Generated improved fallback WGSL shader for stage: " + String(RenderingDeviceCommons::SHADER_STAGE_NAMES[p_stage]));
+	print_error("🚨🚨🚨 VALIDATION #2: Fallback shader length: " + itos(wgsl_source.length()));
+	print_error("🚨🚨🚨 VALIDATION #2: Fallback shader preview: " + wgsl_source.substr(0, 100) + "...");
 	return wgsl_source;
 #endif
 }
