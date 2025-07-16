@@ -1091,14 +1091,21 @@ void DisplayServerWeb::_dispatch_input_event(const Ref<InputEvent> &p_event) {
 }
 
 DisplayServer *DisplayServerWeb::create_func(const String &p_rendering_driver, WindowMode p_window_mode, VSyncMode p_vsync_mode, uint32_t p_flags, const Point2i *p_position, const Size2i &p_resolution, int p_screen, Context p_context, int64_t p_parent_window, Error &r_error) {
+	printf("🚨🚨🚨 VALIDATION #2: DisplayServerWeb::create_func() CALLED - WebGPU display server creation attempted!\n");
+	printf("🚨🚨🚨 VALIDATION #2: Rendering driver: '%s'\n", p_rendering_driver.utf8().get_data());
 	return memnew(DisplayServerWeb(p_rendering_driver, p_window_mode, p_vsync_mode, p_flags, p_position, p_resolution, p_screen, p_context, p_parent_window, r_error));
 }
 
 DisplayServerWeb::DisplayServerWeb(const String &p_rendering_driver, WindowMode p_window_mode, VSyncMode p_vsync_mode, uint32_t p_flags, const Point2i *p_position, const Size2i &p_resolution, int p_screen, Context p_context, int64_t p_parent_window, Error &r_error) {
+	printf("🚨🚨🚨 VALIDATION #2: DisplayServerWeb constructor CALLED - WebGPU display server being created!\n");
 	r_error = OK; // Always succeeds for now.
 
+	printf("🚨🚨🚨 VALIDATION #2: About to log rendering driver\n");
 	// 🔍 DEBUG: Log the rendering driver being used
+	printf("🚨🚨🚨 VALIDATION #2: Constructor rendering driver: '%s'\n", p_rendering_driver.utf8().get_data());
+	printf("🚨🚨🚨 VALIDATION #2: About to call print_line\n");
 	print_line("DisplayServerWeb constructor called with rendering driver: '" + p_rendering_driver + "'");
+	printf("🚨🚨🚨 VALIDATION #2: print_line completed\n");
 	print_line("Available rendering drivers:");
 	Vector<String> available_drivers = get_rendering_drivers_func();
 	for (int i = 0; i < available_drivers.size(); i++) {
@@ -1108,10 +1115,14 @@ DisplayServerWeb::DisplayServerWeb(const String &p_rendering_driver, WindowMode 
 	native_menu = memnew(NativeMenu); // Dummy native menu.
 
 	// Ensure the canvas ID.
+	printf("🚨🚨🚨 VALIDATION #2: About to get canvas ID\n");
 	godot_js_config_canvas_id_get(canvas_id, 256);
+	printf("🚨🚨🚨 VALIDATION #2: Canvas ID obtained: %s\n", canvas_id);
 
 	// Handle contextmenu, webglcontextlost
+	printf("🚨🚨🚨 VALIDATION #2: About to setup canvas\n");
 	godot_js_display_setup_canvas(p_resolution.x, p_resolution.y, (p_window_mode == WINDOW_MODE_FULLSCREEN || p_window_mode == WINDOW_MODE_EXCLUSIVE_FULLSCREEN), OS::get_singleton()->is_hidpi_allowed() ? 1 : 0);
+	printf("🚨🚨🚨 VALIDATION #2: Canvas setup completed\n");
 
 	// Check if it's windows.
 	swap_cancel_ok = godot_js_display_is_swap_ok_cancel() == 1;
@@ -1120,22 +1131,27 @@ DisplayServerWeb::DisplayServerWeb(const String &p_rendering_driver, WindowMode 
 	godot_js_os_request_quit_cb(request_quit_callback);
 
 #ifdef WEBGPU_ENABLED
+	printf("🚨🚨🚨 VALIDATION #2: Checking if rendering driver is webgpu\n");
 	if (p_rendering_driver == "webgpu") {
+		printf("🚨🚨🚨 VALIDATION #2: WebGPU rendering driver confirmed, starting WebGPU initialization\n");
 		print_verbose("WebGPU rendering driver selected");
 		print_line("🔧🔧🔧 DISPLAY: WebGPU rendering driver selected, starting initialization 🔧🔧🔧");
 
 		// Check if WebGPU is supported
-		print_line("🔧🔧🔧 DISPLAY: Checking WebGPU browser support 🔧🔧🔧");
+		print_error("🚨🚨🚨 VALIDATION #1: Checking WebGPU browser support - this determines which rendering system is used!");
+		print_error("🔧🔧🔧 DISPLAY: Checking WebGPU browser support 🔧🔧🔧");
 		if (!godot_js_webgpu_is_supported()) {
-			print_line("🔧🔧🔧 DISPLAY: WebGPU NOT supported by browser 🔧🔧🔧");
+			print_error("🚨🚨🚨 VALIDATION #1 RESULT: WebGPU NOT supported - falling back to RasterizerDummy (this explains missing shader creation!)");
+			print_error("🔧🔧🔧 DISPLAY: WebGPU NOT supported by browser 🔧🔧🔧");
 			OS::get_singleton()->alert(
 				"Your browser does not support WebGPU.\n\n"
 				"WebGPU requires Chrome 113+ or Firefox with WebGPU enabled.",
 				"WebGPU not supported");
 			RasterizerDummy::make_current();
-			print_line("🔧🔧🔧 DISPLAY: Fallback to RasterizerDummy (no browser support) 🔧🔧🔧");
+			print_error("🔧🔧🔧 DISPLAY: Fallback to RasterizerDummy (no browser support) 🔧🔧🔧");
 		} else {
-			print_line("🔧🔧🔧 DISPLAY: WebGPU IS supported by browser, proceeding 🔧🔧🔧");
+			print_error("🚨🚨🚨 VALIDATION #1 RESULT: WebGPU IS supported - proceeding with RenderingDevice system!");
+			print_error("🔧🔧🔧 DISPLAY: WebGPU IS supported by browser, proceeding 🔧🔧🔧");
 			// Initialize WebGPU
 			print_line("🔧🔧🔧 DISPLAY: Calling godot_js_webgpu_init 🔧🔧🔧");
 			if (godot_js_webgpu_init(canvas_id)) {
@@ -1162,9 +1178,11 @@ DisplayServerWeb::DisplayServerWeb(const String &p_rendering_driver, WindowMode 
 						// WebGPU callback mechanism will handle device retry automatically
 
 						// Try to initialize WebGPU device (deferred initialization)
+						print_error("🚨🚨🚨 VALIDATION #3: About to initialize RenderingDevice - this should create our WebGPU driver!");
 						print_line("WebGPU: Attempting deferred initialization...");
 						print_line("🔧🔧🔧 DISPLAY: Calling rendering_device->initialize 🔧🔧🔧");
 						Error init_result = rendering_device->initialize(rendering_context, MAIN_WINDOW_ID);
+						print_error("🚨🚨🚨 VALIDATION #3 RESULT: rendering_device->initialize returned: " + itos(init_result) + " (0=OK, 1=FAILED, 2=ERR_BUSY)");
 						print_line("🔧🔧🔧 DISPLAY: rendering_device->initialize returned: " + itos(init_result) + " 🔧🔧🔧");
 
 						if (init_result == ERR_BUSY) {
@@ -1183,7 +1201,9 @@ DisplayServerWeb::DisplayServerWeb(const String &p_rendering_driver, WindowMode 
 							print_line("🔧🔧🔧 DISPLAY: Screen created, calling RendererCompositorRD::make_current() 🔧🔧🔧");
 
 							// Use the RD-based compositor instead of dummy
+							print_error("🚨🚨🚨 VALIDATION #2: About to call RendererCompositorRD::make_current() - this activates RenderingDevice system!");
 							RendererCompositorRD::make_current();
+							print_error("🚨🚨🚨 VALIDATION #2 RESULT: RendererCompositorRD::make_current() COMPLETED - RenderingDevice system should now be active!");
 							print_line("WebGPU renderer activated successfully!");
 							print_line("🔧🔧🔧 DISPLAY: RendererCompositorRD::make_current() COMPLETED! 🔧🔧🔧");
 						} else {
@@ -1335,7 +1355,10 @@ bool DisplayServerWeb::has_feature(Feature p_feature) const {
 }
 
 void DisplayServerWeb::register_web_driver() {
+	printf("🚨🚨🚨 VALIDATION #2: DisplayServerWeb::register_web_driver() executing!\n");
+	printf("🚨🚨🚨 VALIDATION #2: About to register display server with name 'web'\n");
 	register_create_function("web", create_func, get_rendering_drivers_func);
+	printf("🚨🚨🚨 VALIDATION #2: Web display server registration completed!\n");
 }
 
 String DisplayServerWeb::get_name() const {

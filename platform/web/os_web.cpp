@@ -54,10 +54,13 @@ void OS_Web::alert(const String &p_alert, const String &p_title) {
 
 // Lifecycle
 void OS_Web::initialize() {
+	printf("🚨🚨🚨 VALIDATION #2: OS_Web::initialize() called - about to register web display server!\n");
 	OS_Unix::initialize_core();
 	IPWeb::make_default();
 	NetSocketWeb::make_default();
+	printf("🚨🚨🚨 VALIDATION #2: About to call DisplayServerWeb::register_web_driver()\n");
 	DisplayServerWeb::register_web_driver();
+	printf("🚨🚨🚨 VALIDATION #2: DisplayServerWeb::register_web_driver() completed!\n");
 }
 
 void OS_Web::resume_audio() {

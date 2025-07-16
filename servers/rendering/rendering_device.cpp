@@ -7021,11 +7021,13 @@ void RenderingDevice::_flush_and_stall_for_all_frames() {
 }
 
 Error RenderingDevice::initialize(RenderingContextDriver *p_context, DisplayServer::WindowID p_main_window) {
+	print_error("🚨🚨🚨 VALIDATION #1: RenderingDevice::initialize() CALLED - this is the main RenderingDevice initialization!");
 	ERR_RENDER_THREAD_GUARD_V(ERR_UNAVAILABLE);
 
 	Error err;
 	RenderingContextDriver::SurfaceID main_surface = 0;
 	is_main_instance = (singleton == this) && (p_main_window != DisplayServer::INVALID_WINDOW_ID);
+	print_error("🚨🚨🚨 VALIDATION #1: is_main_instance: " + itos(is_main_instance) + ", window_id: " + itos(p_main_window));
 	if (p_main_window != DisplayServer::INVALID_WINDOW_ID) {
 		// Retrieve the surface from the main window if it was specified.
 		main_surface = p_context->surface_get_from_window(p_main_window);
@@ -7033,7 +7035,9 @@ Error RenderingDevice::initialize(RenderingContextDriver *p_context, DisplayServ
 	}
 
 	context = p_context;
+	print_error("🚨🚨🚨 VALIDATION #1: About to call context->driver_create() - this should create WebGPU driver!");
 	driver = context->driver_create();
+	print_error("🚨🚨🚨 VALIDATION #1: driver_create() returned: " + itos((uint64_t)driver) + " (null=" + itos(driver == nullptr) + ")");
 
 	print_verbose("Devices:");
 	int32_t device_index = Engine::get_singleton()->get_gpu_index();
@@ -7092,7 +7096,9 @@ Error RenderingDevice::initialize(RenderingContextDriver *p_context, DisplayServ
 	upload_staging_buffers.usage_bits = RDD::BUFFER_USAGE_TRANSFER_FROM_BIT;
 	download_staging_buffers.usage_bits = RDD::BUFFER_USAGE_TRANSFER_TO_BIT;
 
+	print_error("🚨🚨🚨 VALIDATION #1: About to call driver->initialize() - this should initialize WebGPU driver!");
 	err = driver->initialize(device_index, frame_count);
+	print_error("🚨🚨🚨 VALIDATION #1: driver->initialize() returned: " + itos(err) + " (0=OK, 1=FAILED)");
 	ERR_FAIL_COND_V_MSG(err != OK, FAILED, "Failed to initialize driver for device.");
 
 	if (is_main_instance) {

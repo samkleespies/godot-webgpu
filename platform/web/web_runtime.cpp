@@ -28,8 +28,11 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
+#include <cstdio>
+
 extern int godot_web_main(int argc, char *argv[]);
 
 int main(int argc, char *argv[]) {
+	printf("🚨🚨🚨 VALIDATION #1: main() in web_runtime.cpp CALLED - web platform entry point!\n");
 	return godot_web_main(argc, argv);
 }

@@ -80,6 +80,7 @@ RenderingDeviceDriverWebGPU::~RenderingDeviceDriverWebGPU() {
 }
 
 Error RenderingDeviceDriverWebGPU::initialize(uint32_t p_device_index, uint32_t p_frame_count) {
+	print_error("🚨🚨🚨 VALIDATION #1: RenderingDeviceDriverWebGPU::initialize() CALLED - WebGPU driver initialization starting!");
 	print_verbose("WebGPU: Starting initialization with improved device acquisition");
 
 #ifdef __EMSCRIPTEN__
@@ -228,9 +229,12 @@ Error RenderingDeviceDriverWebGPU::initialize(uint32_t p_device_index, uint32_t 
 #endif
 
 	if (!device) {
+		print_error("🚨🚨🚨 VALIDATION #1 RESULT: WebGPU device NOT available - returning ERR_CANT_CREATE (this causes fallback!)");
 		print_line("WebGPU: Device not available - falling back to OpenGL compatibility mode");
 		return ERR_CANT_CREATE; // This will cause the engine to fall back to OpenGL
 	}
+
+	print_error("🚨🚨🚨 VALIDATION #1 RESULT: WebGPU device IS available - driver initialization should succeed!");
 	
 	// CRITICAL: Validate that we have a proper device handle
 	// Sometimes JavaScript devices are returned but not properly converted
@@ -2883,6 +2887,7 @@ void RenderingDeviceDriverWebGPU::_setup_color_blend_state(WGPUColorTargetState 
 // ----- SHADER IMPLEMENTATION -----
 
 RenderingDeviceDriver::ShaderID RenderingDeviceDriverWebGPU::shader_create_from_container(const Ref<RenderingShaderContainer> &p_shader_container, const Vector<ImmutableSampler> &p_immutable_samplers) {
+	print_error("🚨🚨🚨 VALIDATION #1: shader_create_from_container CALLED - WebGPU shader creation function is being invoked!");
 	print_error("🔧 SHADER DEBUG: shader_create_from_container called");
 
 	if (!device) {
@@ -2896,9 +2901,13 @@ RenderingDeviceDriver::ShaderID RenderingDeviceDriverWebGPU::shader_create_from_
 	}
 
 	if (p_shader_container.is_null()) {
+		print_error("🚨🚨🚨 VALIDATION #1 RESULT: Shader container is NULL - this is why shader creation fails!");
 		print_error("🔧 SHADER ERROR: Shader container is null");
 		return ShaderID();
 	}
+
+	print_error("🚨🚨🚨 VALIDATION #1 RESULT: Shader container is VALID - proceeding with shader creation");
+	print_error("🚨🚨🚨 VALIDATION #1 RESULT: Container has " + itos(p_shader_container->shaders.size()) + " shader stages");
 
 	print_error("🔧 SHADER DEBUG: Container is valid, casting to WebGPU container");
 
@@ -3970,6 +3979,8 @@ RenderingDeviceDriver::PipelineID RenderingDeviceDriverWebGPU::compute_pipeline_
 // ----- SPIR-V TO WGSL CONVERSION -----
 
 String RenderingDeviceDriverWebGPU::_convert_spirv_to_wgsl(const Vector<uint8_t> &p_spirv_data, RenderingDeviceCommons::ShaderStage p_stage) {
+	print_error("🚨🚨🚨 VALIDATION #2: _convert_spirv_to_wgsl CALLED - SPIR-V to WGSL conversion function is being invoked!");
+	print_error("🚨🚨🚨 VALIDATION #2: SPIR-V data size: " + itos(p_spirv_data.size()) + " bytes, stage: " + String(RenderingDeviceCommons::SHADER_STAGE_NAMES[p_stage]));
 	print_verbose("🔧 SPIRV->WGSL: Starting conversion for stage: " + String(RenderingDeviceCommons::SHADER_STAGE_NAMES[p_stage]));
 	
 	if (p_spirv_data.is_empty()) {
@@ -4079,6 +4090,8 @@ fn cs_main(@builtin(global_invocation_id) global_id: vec3<u32>) {
 }
 
 bool RenderingDeviceDriverWebGPU::_create_shader_module_from_wgsl(const String &p_wgsl_source, const String &p_name, WGPUShaderModule *r_module) {
+	print_error("🚨🚨🚨 VALIDATION #3: _create_shader_module_from_wgsl CALLED - WGSL module creation function is being invoked!");
+	print_error("🚨🚨🚨 VALIDATION #3: Shader name: " + p_name + ", WGSL source length: " + itos(p_wgsl_source.length()));
 	print_verbose("🔧 WGSL MODULE: Creating shader module: " + p_name);
 	
 	if (!device) {

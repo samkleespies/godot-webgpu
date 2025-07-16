@@ -44,6 +44,7 @@
 
 #include <emscripten/emscripten.h>
 #include <cstdlib>
+#include <cstdio>
 
 static OS_Web *os = nullptr;
 #ifndef PROXY_TO_PTHREAD_ENABLED
@@ -124,6 +125,7 @@ void print_web_header() {
 
 /// When calling main, it is assumed FS is setup and synced.
 extern EMSCRIPTEN_KEEPALIVE int godot_web_main(int argc, char *argv[]) {
+	printf("🚨🚨🚨 VALIDATION #1: godot_web_main() CALLED - real web platform initialization starting!\n");
 	os = new OS_Web();
 
 #ifdef TOOLS_ENABLED
@@ -133,7 +135,9 @@ extern EMSCRIPTEN_KEEPALIVE int godot_web_main(int argc, char *argv[]) {
 	// We must override main when testing is enabled
 	TEST_MAIN_OVERRIDE
 
+	printf("🚨🚨🚨 VALIDATION #1: About to call Main::setup() - this should trigger display server selection!\n");
 	Error err = Main::setup(argv[0], argc - 1, &argv[1]);
+	printf("🚨🚨🚨 VALIDATION #1: Main::setup() returned with error: %d (0=OK)\n", err);
 
 	// Proper shutdown in case of setup failure.
 	if (err != OK) {
@@ -153,7 +157,9 @@ extern EMSCRIPTEN_KEEPALIVE int godot_web_main(int argc, char *argv[]) {
 	// Ease up compatibility.
 	ResourceLoader::set_abort_on_missing_resources(false);
 
+	printf("🚨🚨🚨 VALIDATION #1: About to call Main::start() - this should call Main::setup2() and create display server!\n");
 	int ret = Main::start();
+	printf("🚨🚨🚨 VALIDATION #1: Main::start() returned with code: %d\n", ret);
 	os->set_exit_code(ret);
 	os->get_main_loop()->initialize();
 #ifdef TOOLS_ENABLED

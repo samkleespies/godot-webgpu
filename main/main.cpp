@@ -960,10 +960,14 @@ int Main::test_entrypoint(int argc, char *argv[], bool &tests_need_run) {
  */
 
 Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_phase) {
+	printf("🚨🚨🚨 VALIDATION #1: Main::setup() STARTED - beginning of setup function!\n");
 	Thread::make_main_thread();
 	set_current_thread_safe_for_nodes(true);
 
+	printf("🚨🚨🚨 VALIDATION #1: About to call OS::get_singleton()->initialize()\n");
+	printf("🚨🚨🚨 VALIDATION #1: OS singleton name: %s\n", OS::get_singleton()->get_name().utf8().get_data());
 	OS::get_singleton()->initialize();
+	printf("🚨🚨🚨 VALIDATION #1: OS::get_singleton()->initialize() completed\n");
 
 	// Benchmark tracking must be done after `OS::get_singleton()->initialize()` as on some
 	// platforms, it's used to set up the time utilities.
@@ -994,6 +998,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	GLOBAL_DEF_RST("application/run/flush_stdout_on_print.debug", true);
 
 	MAIN_PRINT("Main: Parse CMDLine");
+	printf("🚨🚨🚨 VALIDATION #1: Starting command line parsing - argc: %d\n", argc);
 
 	/* argument parsing and main creation */
 	List<String> args;
@@ -1066,10 +1071,12 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	Error exit_err = ERR_INVALID_PARAMETER;
 
 	I = args.front();
+	printf("🚨🚨🚨 VALIDATION #1: Starting argument parsing loop - total args: %d\n", args.size());
 	while (I) {
 		List<String>::Element *N = I->next();
 
 		const String &arg = I->get();
+		printf("🚨🚨🚨 VALIDATION #1: Processing argument: '%s'\n", arg.utf8().get_data());
 
 #ifdef MACOS_ENABLED
 		// Ignore the process serial number argument passed by macOS Gatekeeper.
@@ -1720,13 +1727,16 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 			}
 
 		} else if (arg == "--main-pack") {
+			printf("🚨🚨🚨 VALIDATION #1: Processing --main-pack argument\n");
 			if (N) {
 				main_pack = N->get();
+				printf("🚨🚨🚨 VALIDATION #1: main_pack set to: '%s'\n", main_pack.utf8().get_data());
 				N = N->next();
 			} else {
 				OS::get_singleton()->print("Missing path to main pack file, aborting.\n");
 				goto error;
 			}
+			printf("🚨🚨🚨 VALIDATION #1: --main-pack processing completed\n");
 
 		} else if (arg == "-d" || arg == "--debug") {
 			debug_uri = "local://";
@@ -1927,11 +1937,15 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	}
 
 	OS::get_singleton()->_in_editor = editor;
+	printf("🚨🚨🚨 VALIDATION #1: About to call globals->setup() - this is likely where it hangs!\n");
+	printf("🚨🚨🚨 VALIDATION #1: project_path: '%s', main_pack: '%s'\n", project_path.utf8().get_data(), main_pack.utf8().get_data());
 	if (globals->setup(project_path, main_pack, upwards, editor) == OK) {
+		printf("🚨🚨🚨 VALIDATION #1: globals->setup() returned OK!\n");
 #ifdef TOOLS_ENABLED
 		found_project = true;
 #endif
 	} else {
+		printf("🚨🚨🚨 VALIDATION #1: globals->setup() FAILED!\n");
 #ifdef TOOLS_ENABLED
 		editor = false;
 #else
@@ -1944,26 +1958,34 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	}
 
 	// Initialize WorkerThreadPool.
+	printf("🚨🚨🚨 VALIDATION #1: About to initialize WorkerThreadPool\n");
 	{
 #ifdef THREADS_ENABLED
 		if (editor || project_manager) {
+			printf("🚨🚨🚨 VALIDATION #1: Initializing WorkerThreadPool for editor/project_manager\n");
 			WorkerThreadPool::get_singleton()->init(-1, 0.75);
 		} else {
 			int worker_threads = GLOBAL_GET("threading/worker_pool/max_threads");
 			float low_priority_ratio = GLOBAL_GET("threading/worker_pool/low_priority_thread_ratio");
+			printf("🚨🚨🚨 VALIDATION #1: Initializing WorkerThreadPool with %d threads\n", worker_threads);
 			WorkerThreadPool::get_singleton()->init(worker_threads, low_priority_ratio);
 		}
 #else
+		printf("🚨🚨🚨 VALIDATION #1: Initializing WorkerThreadPool with 0 threads (no threading)\n");
 		WorkerThreadPool::get_singleton()->init(0, 0);
 #endif
 	}
+	printf("🚨🚨🚨 VALIDATION #1: WorkerThreadPool initialization completed\n");
 
 #ifdef TOOLS_ENABLED
+	printf("🚨🚨🚨 VALIDATION #1: Checking project manager fallback\n");
 	if (!project_manager && !editor) {
 		// If we didn't find a project, we fall back to the project manager.
 		project_manager = !found_project && !cmdline_tool;
 	}
+	printf("🚨🚨🚨 VALIDATION #1: Project manager check completed\n");
 
+	printf("🚨🚨🚨 VALIDATION #1: Setting up Vulkan layer configuration\n");
 	{
 		// Synced with https://github.com/baldurk/renderdoc/blob/2b01465c7/renderdoc/driver/vulkan/vk_layer.cpp#L118-L165
 		LocalVector<String> layers_to_disable = {
@@ -1999,10 +2021,13 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 			}
 		}
 	}
+	printf("🚨🚨🚨 VALIDATION #1: Vulkan layer configuration completed\n");
 #endif
 
+	printf("🚨🚨🚨 VALIDATION #1: Checking test rendering device conditions\n");
 #if defined(TOOLS_ENABLED) && (defined(WINDOWS_ENABLED) || defined(LINUXBSD_ENABLED))
 	if (test_rd_support) {
+		printf("🚨🚨🚨 VALIDATION #1: test_rd_support is true - going to error\n");
 		// Test Rendering Device creation and exit.
 
 		OS::get_singleton()->set_crash_handler_silent();
@@ -2013,6 +2038,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 		}
 		goto error;
 	} else if (test_rd_creation) {
+		printf("🚨🚨🚨 VALIDATION #1: test_rd_creation is true - going to error\n");
 		// Test OpenGL context and Rendering Device simultaneous creation and exit.
 
 		OS::get_singleton()->set_crash_handler_silent();
@@ -2023,6 +2049,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 		}
 		goto error;
 	}
+	printf("🚨🚨🚨 VALIDATION #1: Test rendering device conditions passed\n");
 #endif
 
 #ifdef TOOLS_ENABLED
@@ -2807,16 +2834,23 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 
 	OS::get_singleton()->benchmark_end_measure("Startup", "Main::Setup");
 
+	printf("🚨🚨🚨 VALIDATION #1: Checking p_second_phase value: %s\n", p_second_phase ? "true" : "false");
 	if (p_second_phase) {
+		printf("🚨🚨🚨 VALIDATION #1: p_second_phase is true, calling setup2()\n");
 		exit_err = setup2();
+		printf("🚨🚨🚨 VALIDATION #1: setup2() returned with error: %d\n", exit_err);
 		if (exit_err != OK) {
 			goto error;
 		}
+	} else {
+		printf("🚨🚨🚨 VALIDATION #1: p_second_phase is false, skipping setup2()\n");
 	}
 
+	printf("🚨🚨🚨 VALIDATION #1: Main::setup() COMPLETED SUCCESSFULLY - returning OK!\n");
 	return OK;
 
 error:
+	printf("🚨🚨🚨 VALIDATION #1: Main::setup() HIT ERROR LABEL - exit_err: %d\n", exit_err);
 
 	text_driver = "";
 	display_driver = "";
@@ -2904,6 +2938,7 @@ Error _parse_resource_dummy(void *p_data, VariantParser::Stream *p_stream, Ref<R
 }
 
 Error Main::setup2(bool p_show_boot_logo) {
+	printf("🚨🚨🚨 VALIDATION #2: Main::setup2() CALLED - display server creation should happen here!\n");
 	OS::get_singleton()->benchmark_begin_measure("Startup", "Main::Setup2");
 
 	Thread::make_main_thread(); // Make whatever thread call this the main thread.
@@ -2911,11 +2946,14 @@ Error Main::setup2(bool p_show_boot_logo) {
 
 	// Don't use rich formatting to prevent ANSI escape codes from being written to log files.
 	print_header(false);
+	printf("🚨🚨🚨 VALIDATION #2: print_header() completed\n");
 
 #ifdef TOOLS_ENABLED
+	printf("🚨🚨🚨 VALIDATION #2: Starting editor settings section\n");
 	int accessibility_mode_editor = 0;
 	int tablet_driver_editor = -1;
 	if (editor || project_manager || cmdline_tool) {
+		printf("🚨🚨🚨 VALIDATION #2: Loading editor settings\n");
 		OS::get_singleton()->benchmark_begin_measure("Startup", "Initialize Early Settings");
 
 		EditorPaths::create();
@@ -3111,13 +3149,24 @@ Error Main::setup2(bool p_show_boot_logo) {
 
 		int display_driver_idx = -1;
 
+		// VALIDATION: Log all registered display servers
+		print_error("🚨🚨🚨 VALIDATION #1: Display server selection starting!");
+		print_error("🚨🚨🚨 VALIDATION #1: Requested display driver: '" + display_driver + "'");
+		print_error("🚨🚨🚨 VALIDATION #1: Available display servers:");
+		for (int i = 0; i < DisplayServer::get_create_function_count(); i++) {
+			String name = DisplayServer::get_create_function_name(i);
+			print_error("🚨🚨🚨 VALIDATION #1:   [" + itos(i) + "] " + name);
+		}
+
 		if (display_driver.is_empty() || display_driver == "default") {
 			display_driver_idx = 0;
+			print_error("🚨🚨🚨 VALIDATION #1: Using default display server (index 0)");
 		} else {
 			for (int i = 0; i < DisplayServer::get_create_function_count(); i++) {
 				String name = DisplayServer::get_create_function_name(i);
 				if (display_driver == name) {
 					display_driver_idx = i;
+					print_error("🚨🚨🚨 VALIDATION #1: Found matching display server: " + name + " at index " + itos(i));
 					break;
 				}
 			}
@@ -3126,8 +3175,12 @@ Error Main::setup2(bool p_show_boot_logo) {
 				// If the requested driver wasn't found, pick the first entry.
 				// If all else failed it would be the headless server.
 				display_driver_idx = 0;
+				print_error("🚨🚨🚨 VALIDATION #1: Requested driver not found, falling back to index 0");
 			}
 		}
+
+		String selected_name = DisplayServer::get_create_function_name(display_driver_idx);
+		print_error("🚨🚨🚨 VALIDATION #1 RESULT: Selected display server: '" + selected_name + "' (index " + itos(display_driver_idx) + ")");
 
 		Vector2i *window_position = nullptr;
 		Vector2i position = init_custom_pos;
@@ -3175,12 +3228,24 @@ Error Main::setup2(bool p_show_boot_logo) {
 			}
 		}
 		DisplayServer::accessibility_set_mode(accessibility_mode);
+		printf("🚨🚨🚨 VALIDATION #2: Reached display server creation section in Main::setup2()!\n");
 
 		// rendering_driver now held in static global String in main and initialized in setup()
 		Error err;
+		printf("🚨🚨🚨 VALIDATION #2: About to call print_error for DisplayServer::create logging\n");
+		print_error("🚨🚨🚨 VALIDATION #1: About to call DisplayServer::create() - this is the critical display server creation!");
+		printf("🚨🚨🚨 VALIDATION #2: First print_error completed\n");
+		print_error("🚨🚨🚨 VALIDATION #1: Selected display driver index: " + itos(display_driver_idx));
+		printf("🚨🚨🚨 VALIDATION #2: Second print_error completed\n");
+		print_error("🚨🚨🚨 VALIDATION #1: Selected rendering driver: '" + rendering_driver + "'");
+		printf("🚨🚨🚨 VALIDATION #2: All print_error calls completed, about to call DisplayServer::create\n");
 		display_server = DisplayServer::create(display_driver_idx, rendering_driver, window_mode, window_vsync_mode, window_flags, window_position, window_size, init_screen, context, init_embed_parent_window_id, err);
+		printf("🚨🚨🚨 VALIDATION #2: DisplayServer::create() RETURNED! err=%d, display_server=%p\n", err, display_server);
+		print_error("🚨🚨🚨 VALIDATION #1: DisplayServer::create() returned - err: " + itos(err) + ", display_server: " + itos((uint64_t)display_server));
 		if (err != OK || display_server == nullptr) {
 			String last_name = DisplayServer::get_create_function_name(display_driver_idx);
+			print_error("🚨🚨🚨 VALIDATION #1: Primary display server FAILED - '" + last_name + "' failed with error: " + itos(err));
+			print_error("🚨🚨🚨 VALIDATION #1: Attempting fallback display servers...");
 
 			// We can't use this display server, try other ones as fallback.
 			// Skip headless (always last registered) because that's not what users
@@ -3190,10 +3255,13 @@ Error Main::setup2(bool p_show_boot_logo) {
 					continue; // Don't try the same twice.
 				}
 				String name = DisplayServer::get_create_function_name(i);
+				print_error("🚨🚨🚨 VALIDATION #1: Trying fallback display server: '" + name + "' (index " + itos(i) + ")");
 				WARN_PRINT(vformat("Display driver %s failed, falling back to %s.", last_name, name));
 
 				display_server = DisplayServer::create(i, rendering_driver, window_mode, window_vsync_mode, window_flags, window_position, window_size, init_screen, context, init_embed_parent_window_id, err);
+				print_error("🚨🚨🚨 VALIDATION #1: Fallback result - err: " + itos(err) + ", display_server: " + itos((uint64_t)display_server));
 				if (err == OK && display_server != nullptr) {
+					print_error("🚨🚨🚨 VALIDATION #1 RESULT: SUCCESS with fallback display server: '" + name + "'");
 					break;
 				}
 			}
