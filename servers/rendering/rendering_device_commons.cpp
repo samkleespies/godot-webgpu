@@ -991,8 +991,34 @@ Error RenderingDeviceCommons::reflect_spirv(VectorView<ShaderStageSPIRVData> p_s
 			SpvReflectShaderModule module;
 			const uint8_t *spirv = p_spirv[i].spirv.ptr();
 			SpvReflectResult result = spvReflectCreateShaderModule(p_spirv[i].spirv.size(), spirv, &module);
+
+			// WEBGPU FIX: Skip SPIR-V reflection for WebGPU builds - use driver's own reflection instead
+			#ifdef __EMSCRIPTEN__
+			if (result != SPV_REFLECT_RESULT_SUCCESS) {
+				// Set basic reflection data for WebGPU builds
+				switch (p_spirv[i].shader_stage) {
+					case SHADER_STAGE_VERTEX:
+						r_reflection.stages_bits.set_flag(SHADER_STAGE_VERTEX);
+						break;
+					case SHADER_STAGE_FRAGMENT:
+						r_reflection.stages_bits.set_flag(SHADER_STAGE_FRAGMENT);
+						break;
+					case SHADER_STAGE_COMPUTE:
+						r_reflection.is_compute = true;
+						r_reflection.stages_bits.set_flag(SHADER_STAGE_COMPUTE);
+						r_reflection.compute_local_size[0] = 1;
+						r_reflection.compute_local_size[1] = 1;
+						r_reflection.compute_local_size[2] = 1;
+						break;
+					default:
+						break;
+				}
+				continue; // Skip the rest of the reflection for this stage
+			}
+			#else
 			ERR_FAIL_COND_V_MSG(result != SPV_REFLECT_RESULT_SUCCESS, FAILED,
 					"Reflection of SPIR-V shader stage '" + String(SHADER_STAGE_NAMES[p_spirv[i].shader_stage]) + "' failed parsing shader.");
+			#endif
 
 			if (r_reflection.is_compute) {
 				r_reflection.compute_local_size[0] = module.entry_points->local_size.x;

@@ -5,21 +5,55 @@
 if (typeof Module === 'undefined') Module = {};
 Module.preRun = Module.preRun || [];
 
-// CRITICAL FIX: Initialize run dependency system properly
+// CRITICAL FIX: Force use of our own run dependency system to avoid conflicts
 Module.runDependencies = Module.runDependencies || 0;
 
-// Use real Emscripten run dependency functions if available, otherwise provide fallback
-Module.addRunDependency = Module.addRunDependency || function(id) {
-  console.log('🔧 FALLBACK: addRunDependency called for:', id);
-  Module.runDependencies++;
-  console.log('🔧 FALLBACK: runDependencies now:', Module.runDependencies);
+// Store our custom functions in a way that can't be overwritten
+const customRunDependencyManager = {
+  addRunDependency: function(id) {
+    console.log('🔧 CUSTOM: addRunDependency called for:', id);
+    Module.runDependencies++;
+    console.log('🔧 CUSTOM: runDependencies now:', Module.runDependencies);
+  },
+
+  removeRunDependency: function(id) {
+    console.log('🔧 CUSTOM: removeRunDependency called for:', id);
+    if (Module.runDependencies > 0) {
+      Module.runDependencies--;
+      console.log('🔧 CUSTOM: runDependencies now:', Module.runDependencies);
+
+      // CRITICAL: If we reach 0, call the main function
+      if (Module.runDependencies === 0 && Module.calledRun === false) {
+        console.log('🔧 CUSTOM: All dependencies resolved, calling main()');
+        Module.calledRun = true; // Prevent multiple calls
+        if (Module.run) {
+          Module.run();
+        } else if (Module._main) {
+          Module._main();
+        } else {
+          console.log('🔧 CUSTOM: No main function found to call');
+        }
+      }
+    }
+  }
 };
 
-Module.removeRunDependency = Module.removeRunDependency || function(id) {
-  console.log('🔧 FALLBACK: removeRunDependency called for:', id);
-  if (Module.runDependencies > 0) Module.runDependencies--;
-  console.log('🔧 FALLBACK: runDependencies now:', Module.runDependencies);
-};
+// Override Module functions and make them non-configurable
+Object.defineProperty(Module, 'addRunDependency', {
+  value: customRunDependencyManager.addRunDependency,
+  writable: false,
+  configurable: false
+});
+
+Object.defineProperty(Module, 'removeRunDependency', {
+  value: customRunDependencyManager.removeRunDependency,
+  writable: false,
+  configurable: false
+});
+
+// Also store in global scope to prevent overwrites
+window.customAddRunDependency = customRunDependencyManager.addRunDependency;
+window.customRemoveRunDependency = customRunDependencyManager.removeRunDependency;
 
 // CRITICAL FIX: Debug and use immediate execution approach
 console.log('🔧 PRE_WGPU.JS: Script is loading...');
@@ -861,37 +895,344 @@ if (Module.preinitializedWebGPUDevice && Module.preinitializedWebGPUDevice.queue
   attempt();
 })();
 
-// Globally sanitize every GPU buffer creation, even those bypassing our helpers
-(function patchGPUDeviceCreateBuffer() {
-  if (typeof GPUDevice === 'undefined' || !GPUDevice.prototype) return;
-  const proto = GPUDevice.prototype;
-  const origCreate = proto.createBuffer;
-  if (!origCreate || origCreate.__patched_for_sanitize__) return;
-  proto.createBuffer = function(descriptor) {
-    try {
-      const sanitized = Object.assign({}, descriptor);
+// CRITICAL FIX: Bypass broken Emscripten WebGPU bindings entirely
+(function patchEmscriptenWebGPU() {
+  console.log('🔧 PATCH: Installing Emscripten WebGPU bypass for buffer size fix');
 
-      // CRITICAL FIX: Sanitize usage flags
-      if (sanitized && 'usage' in sanitized) {
-        sanitized.usage = _sanitizeBufferUsage(sanitized.usage);
-      }
+  // Store reference to the C++ validation data
+  window._webgpu_buffer_size_fix = window._webgpu_buffer_size_fix || {};
 
-      // CRITICAL FIX: WebGPU requires buffer size to be multiple of 4 when mappedAtCreation=true
-      if (sanitized && sanitized.mappedAtCreation && sanitized.size && (sanitized.size & 0x3) !== 0) {
-        const originalSize = sanitized.size;
-        sanitized.size = (originalSize + 3) & ~0x3; // Round up to next multiple of 4
-        console.log("🔧 GLOBAL PATCH: Rounded buffer size from", originalSize, "to", sanitized.size, "for mappedAtCreation");
-      }
+  // 🔧 REGISTRY FIX: Initialize buffer handle counter for registry system
+  if (!window._webgpu_buffer_size_fix.bufferHandleCounter) {
+    window._webgpu_buffer_size_fix.bufferHandleCounter = 1;
+    console.error('🔧 REGISTRY FIX: Initialized buffer handle counter');
+  }
 
-      return origCreate.call(this, sanitized);
-    } catch (e) {
-      console.log('🔧 PATCH ERROR: createBuffer sanitize failed', e);
-      // Fallback to original call if something went wrong
-      return origCreate.call(this, descriptor);
+  // 🔍 VALIDATION LOG: Check which WebGPU implementation is being used
+  console.error('🔍 WEBGPU IMPLEMENTATION CHECK: Checking available WebGPU functions...');
+  console.error('🔍 WEBGPU CHECK: typeof Module =', typeof Module);
+  console.error('🔍 WEBGPU CHECK: typeof _wgpuDeviceCreateBuffer =', typeof _wgpuDeviceCreateBuffer);
+  console.error('🔍 WEBGPU CHECK: typeof _emwgpuDeviceCreateBuffer =', typeof _emwgpuDeviceCreateBuffer);
+  console.error('🔍 WEBGPU CHECK: typeof wgpuDeviceCreateBuffer =', typeof wgpuDeviceCreateBuffer);
+
+  // Check Module.asm for WebGPU functions
+  if (typeof Module !== 'undefined' && Module.asm) {
+    const wgpuFunctions = Object.keys(Module.asm).filter(k => k.includes('wgpu'));
+    console.error('🔍 MODULE.ASM CHECK: WebGPU functions found:', wgpuFunctions.length > 0 ? wgpuFunctions.slice(0, 10) : 'NONE');
+
+    const dawnFunctions = Object.keys(Module.asm).filter(k => k.includes('emwgpu'));
+    console.error('🔍 DAWN PORT CHECK: Dawn functions found:', dawnFunctions.length > 0 ? dawnFunctions.slice(0, 10) : 'NONE');
+  } else {
+    console.error('🔍 MODULE CHECK: Module.asm not available');
+  }
+
+  // Check for conflicting implementations
+  const webgpuSources = [];
+  if (typeof _wgpuDeviceCreateBuffer !== 'undefined') webgpuSources.push('Emscripten _wgpuDeviceCreateBuffer');
+  if (typeof _emwgpuDeviceCreateBuffer !== 'undefined') webgpuSources.push('Dawn _emwgpuDeviceCreateBuffer');
+  if (typeof wgpuDeviceCreateBuffer !== 'undefined') webgpuSources.push('Global wgpuDeviceCreateBuffer');
+  console.error('🔍 CONFLICT CHECK: Available WebGPU implementations:', webgpuSources);
+
+  // 🔧 CRITICAL FIX: Create or enhance WebGPU registry system for Emscripten WebGPU
+  // Since we're using Emscripten's WebGPU instead of Dawn, we need to create
+  // a compatible registry system that the Godot driver expects
+
+  // Function to ensure WebGPU.Internals exists (global scope)
+  window.ensureWebGPUInternals = function() {
+    console.error('🔧 REGISTRY DEBUG: ensureWebGPUInternals called');
+    console.error('🔧 REGISTRY DEBUG: typeof window.WebGPU =', typeof window.WebGPU);
+    console.error('🔧 REGISTRY DEBUG: window.WebGPU =', window.WebGPU);
+
+    if (typeof window.WebGPU === 'undefined') {
+      console.error('🔧 REGISTRY FIX: Creating new WebGPU object');
+      window.WebGPU = {};
     }
+
+    console.error('🔧 REGISTRY DEBUG: window.WebGPU.Internals before =', window.WebGPU.Internals);
+
+    if (!window.WebGPU.Internals) {
+      console.error('🔧 REGISTRY FIX: Adding Internals to WebGPU object');
+      window.WebGPU.Internals = {
+        jsObjects: {},
+        bufferOnUnmaps: {},
+
+        jsObjectInsert: function(ptr, jsObject) {
+          if (!ptr) return;
+          var key = (ptr >>> 0);
+          console.error('🔧 REGISTRY FIX: Inserting object into WebGPU registry, handle=' + key);
+          this.jsObjects[key] = jsObject;
+        },
+
+        jsObjectRemove: function(ptr) {
+          if (!ptr) return;
+          var key = (ptr >>> 0);
+          console.error('🔧 REGISTRY FIX: Removing object from WebGPU registry, handle=' + key);
+          delete this.jsObjects[key];
+          if (this.bufferOnUnmaps[key]) {
+            delete this.bufferOnUnmaps[key];
+          }
+        },
+
+        getJsObject: function(ptr) {
+          if (!ptr) return undefined;
+          var key = (ptr >>> 0);
+          return this.jsObjects[key];
+        }
+      };
+      console.error('🔧 REGISTRY FIX: WebGPU.Internals registry system created successfully');
+      console.error('🔧 REGISTRY DEBUG: window.WebGPU.Internals after creation =', window.WebGPU.Internals);
+    } else {
+      console.error('🔧 REGISTRY CHECK: WebGPU.Internals already exists');
+      console.error('🔧 REGISTRY DEBUG: existing window.WebGPU.Internals =', window.WebGPU.Internals);
+    }
+
+    // Final verification
+    console.error('🔧 REGISTRY DEBUG: Final verification - window.WebGPU.Internals =', window.WebGPU.Internals);
+    console.error('🔧 REGISTRY DEBUG: Final verification - typeof window.WebGPU.Internals =', typeof window.WebGPU.Internals);
   };
-  proto.createBuffer.__patched_for_sanitize__ = true;
-  console.log('🔧 PATCH: GPUDevice.createBuffer sanitized globally');
+
+  // Ensure registry exists now
+  window.ensureWebGPUInternals();
+
+  // 🔧 CRITICAL FIX: Monitor for WebGPU object changes and restore Internals
+  // Emscripten might overwrite the WebGPU object, so we need to restore our Internals
+  let webgpuCheckInterval = setInterval(function() {
+    if (typeof window.WebGPU !== 'undefined' && !window.WebGPU.Internals) {
+      console.error('🔧 REGISTRY FIX: WebGPU.Internals was lost, restoring...');
+      window.ensureWebGPUInternals();
+    }
+  }, 100); // Check every 100ms
+
+  // Stop monitoring after 10 seconds (should be enough for initialization)
+  setTimeout(function() {
+    clearInterval(webgpuCheckInterval);
+    console.error('🔧 REGISTRY FIX: Stopped monitoring WebGPU.Internals');
+  }, 10000);
+
+  // Check if USE_WEBGPU is enabled (old implementation)
+  if (typeof Module !== 'undefined' && Module.ENVIRONMENT_IS_WEB) {
+    console.error('🔍 EMSCRIPTEN CHECK: ENVIRONMENT_IS_WEB =', Module.ENVIRONMENT_IS_WEB);
+  }
+
+  // Override the Emscripten wgpuDeviceCreateBuffer function directly
+  if (typeof Module !== 'undefined' && Module._wgpuDeviceCreateBuffer) {
+    const origWgpuDeviceCreateBuffer = Module._wgpuDeviceCreateBuffer;
+
+    Module._wgpuDeviceCreateBuffer = function(device, descriptor) {
+      console.error('🔧 EMSCRIPTEN BYPASS: wgpuDeviceCreateBuffer called');
+
+      // Get the correct size from C++ if available
+      const correctSize = window._webgpu_buffer_size_fix.lastCorrectSize;
+      if (correctSize && correctSize > 0) {
+        console.error('🔧 EMSCRIPTEN BYPASS: Using correct size from C++:', correctSize);
+
+        // Get the WebGPU device from the Emscripten device handle
+        const webgpuDevice = Module.preinitializedWebGPUDevice;
+        if (webgpuDevice && webgpuDevice.createBuffer) {
+          console.error('🔧 EMSCRIPTEN BYPASS: Creating buffer directly with native WebGPU API');
+
+          // Read descriptor properties from memory
+          const usage = getValue(descriptor + 4, 'i32'); // Assuming usage is at offset 4
+          const mappedAtCreation = getValue(descriptor + 16, 'i8'); // Assuming mappedAtCreation is at offset 16
+
+          // Create buffer directly with native WebGPU API
+          const nativeDescriptor = {
+            size: correctSize,
+            usage: usage,
+            mappedAtCreation: !!mappedAtCreation,
+            label: 'Godot Buffer (Fixed Size)'
+          };
+
+          console.error('🔧 EMSCRIPTEN BYPASS: Native descriptor:', nativeDescriptor);
+
+          try {
+            const buffer = webgpuDevice.createBuffer(nativeDescriptor);
+            console.error('🔧 EMSCRIPTEN BYPASS: Buffer created successfully with size:', buffer.size);
+
+            // Clear the stored size
+            window._webgpu_buffer_size_fix.lastCorrectSize = null;
+
+            // Return a handle to the buffer (simulate Emscripten behavior)
+            // This is a simplified approach - in reality we'd need to register the buffer
+            return buffer ? 1 : 0; // Return non-zero handle for success
+          } catch (e) {
+            console.error('🚨 EMSCRIPTEN BYPASS: Native buffer creation failed:', e);
+            return 0; // Return 0 for failure
+          }
+        } else {
+          console.error('🚨 EMSCRIPTEN BYPASS: No native WebGPU device available');
+        }
+      }
+
+      // Fallback to original function
+      console.error('🔧 EMSCRIPTEN BYPASS: Falling back to original function');
+      return origWgpuDeviceCreateBuffer.call(this, device, descriptor);
+    };
+
+    console.log('🔧 PATCH: Emscripten wgpuDeviceCreateBuffer bypassed');
+  } else {
+    console.log('🔧 PATCH: Emscripten wgpuDeviceCreateBuffer not found, using GPUDevice patch');
+
+    // Fallback to GPUDevice patch if Emscripten function not available
+    if (typeof GPUDevice !== 'undefined' && GPUDevice.prototype) {
+      const proto = GPUDevice.prototype;
+      const origCreate = proto.createBuffer;
+      if (origCreate && !origCreate.__patched_for_buffer_size_fix__) {
+        proto.createBuffer = function(descriptor) {
+          console.error('🔧 FALLBACK PATCH: createBuffer called');
+          console.error('🔧 FALLBACK PATCH: Input descriptor:', JSON.stringify(descriptor));
+          console.error('🔧 FALLBACK PATCH: Device object:', this);
+          console.error('🔧 FALLBACK PATCH: Device constructor:', this.constructor.name);
+          console.error('🔧 FALLBACK PATCH: Device lost:', this.lost);
+          console.error('🔧 FALLBACK PATCH: Device features:', this.features);
+          console.error('🔧 FALLBACK PATCH: Device limits:', this.limits);
+
+          // 🔧 DEVICE DEBUG: Check if device properties are promises or getters
+          console.error('🔧 DEVICE DEBUG: typeof device.lost:', typeof this.lost);
+          console.error('🔧 DEVICE DEBUG: typeof device.features:', typeof this.features);
+          console.error('🔧 DEVICE DEBUG: typeof device.limits:', typeof this.limits);
+          console.error('🔧 DEVICE DEBUG: device.queue:', this.queue);
+          console.error('🔧 DEVICE DEBUG: device.label:', this.label);
+
+          // Check if device is actually functional
+          try {
+            console.error('🔧 DEVICE DEBUG: Device properties enumeration:', Object.getOwnPropertyNames(this));
+            console.error('🔧 DEVICE DEBUG: Device prototype:', Object.getPrototypeOf(this));
+          } catch (e) {
+            console.error('🔧 DEVICE DEBUG: Error accessing device properties:', e);
+          }
+
+          if (descriptor && descriptor.size === 0) {
+            const correctSize = window._webgpu_buffer_size_fix.lastCorrectSize;
+            if (correctSize && correctSize > 0) {
+              console.error('🔧 FALLBACK PATCH: Using correct size:', correctSize);
+              console.error('🔧 FALLBACK PATCH: About to create fixed descriptor...');
+
+              const fixedDescriptor = {
+                size: correctSize,
+                usage: descriptor.usage,
+                mappedAtCreation: descriptor.mappedAtCreation,
+                label: descriptor.label || 'Godot Buffer (Fixed Size)'
+              };
+
+              console.error('🔧 FALLBACK PATCH: Fixed descriptor created successfully');
+
+              console.error('🔧 FALLBACK PATCH: Fixed descriptor:', JSON.stringify(fixedDescriptor));
+
+              // CRITICAL FIX: Don't clear the size immediately - keep it for potential retries
+              // window._webgpu_buffer_size_fix.lastCorrectSize = null;
+
+              console.error('🔧 FALLBACK PATCH: Calling original createBuffer with fixed descriptor...');
+              try {
+                const result = origCreate.call(this, fixedDescriptor);
+                console.error('🔧 FALLBACK PATCH: Original createBuffer returned:', result);
+                console.error('🔧 FALLBACK PATCH: Result type:', typeof result);
+                console.error('🔧 FALLBACK PATCH: Result constructor:', result ? result.constructor.name : 'null');
+                if (result) {
+                  console.error('🔧 FALLBACK PATCH: Buffer size:', result.size);
+                  console.error('🔧 FALLBACK PATCH: Buffer usage:', result.usage);
+                  console.error('🔧 FALLBACK PATCH: Buffer mapState:', result.mapState);
+
+                  // 🔧 REGISTRY FIX: Register the created buffer in our WebGPU registry
+                  // This ensures that the Godot driver can find the buffer later
+                  console.error('🔧 REGISTRY DEBUG: About to check WebGPU registry availability (size fix case)');
+                  console.error('🔧 REGISTRY DEBUG: typeof WebGPU =', typeof WebGPU);
+
+                  // 🔍 ASSUMPTION VALIDATION: Test scope/context differences (size fix case)
+                  console.error('🔍 SCOPE TEST (size fix): typeof window.WebGPU =', typeof window.WebGPU);
+                  console.error('🔍 SCOPE TEST (size fix): WebGPU === window.WebGPU =', WebGPU === window.WebGPU);
+                  console.error('🔍 SCOPE TEST (size fix): window.WebGPU.Internals =', window.WebGPU ? window.WebGPU.Internals : 'window.WebGPU undefined');
+
+                  // 🔧 SCOPE FIX: Use window.WebGPU (our registry) instead of WebGPU (Emscripten's object)
+                  if (typeof window.WebGPU !== 'undefined' && !window.WebGPU.Internals) {
+                    console.error('🔧 REGISTRY FIX: window.WebGPU.Internals missing at registration time (size fix case), recreating...');
+                    window.ensureWebGPUInternals();
+                    console.error('🔧 REGISTRY DEBUG: After ensureWebGPUInternals (size fix) - window.WebGPU.Internals =', window.WebGPU.Internals);
+                  }
+
+                  if (typeof window.WebGPU !== 'undefined' && window.WebGPU.Internals) {
+                    const handle = window._webgpu_buffer_size_fix.bufferHandleCounter++;
+                    window.WebGPU.Internals.jsObjectInsert(handle, result);
+                    console.error('🔧 REGISTRY FIX: Registered buffer with handle=' + handle + ' in WebGPU registry');
+
+                    // Store the handle so C++ can retrieve it
+                    window._webgpu_buffer_size_fix.lastCreatedHandle = handle;
+                  } else {
+                    console.error('🚨 REGISTRY ERROR: window.WebGPU registry not available for buffer registration (size fix case)');
+                  }
+
+                  // Only clear the size after successful creation
+                  window._webgpu_buffer_size_fix.lastCorrectSize = null;
+                  console.error('🔧 FALLBACK PATCH: Cleared stored size after successful creation');
+                }
+                return result;
+              } catch (err) {
+                console.error('🚨 FALLBACK PATCH: Exception in original createBuffer:', err);
+                console.error('🚨 FALLBACK PATCH: Exception stack:', err.stack);
+                throw err;
+              }
+            } else {
+              console.error('🚨 FALLBACK PATCH: No correct size available for size=0 buffer');
+              console.error('🚨 FALLBACK PATCH: correctSize:', correctSize);
+              console.error('🚨 FALLBACK PATCH: window._webgpu_buffer_size_fix:', window._webgpu_buffer_size_fix);
+            }
+          }
+
+          console.error('🔧 FALLBACK PATCH: No size fix needed, calling original createBuffer...');
+          try {
+            const result = origCreate.call(this, descriptor);
+            console.error('🔧 FALLBACK PATCH: Original createBuffer returned:', result);
+            console.error('🔧 FALLBACK PATCH: Result type:', typeof result);
+            if (result) {
+              console.error('🔧 FALLBACK PATCH: Buffer size:', result.size);
+              console.error('🔧 FALLBACK PATCH: Buffer usage:', result.usage);
+
+              // 🔧 REGISTRY FIX: Register the created buffer in our WebGPU registry
+              console.error('🔧 REGISTRY DEBUG: About to check WebGPU registry availability');
+              console.error('🔧 REGISTRY DEBUG: typeof WebGPU =', typeof WebGPU);
+              console.error('🔧 REGISTRY DEBUG: WebGPU =', WebGPU);
+              console.error('🔧 REGISTRY DEBUG: WebGPU.Internals =', WebGPU ? WebGPU.Internals : 'WebGPU undefined');
+
+              // 🔍 ASSUMPTION VALIDATION: Test scope/context differences
+              console.error('🔍 SCOPE TEST: typeof window.WebGPU =', typeof window.WebGPU);
+              console.error('🔍 SCOPE TEST: window.WebGPU =', window.WebGPU);
+              console.error('🔍 SCOPE TEST: window.WebGPU.Internals =', window.WebGPU ? window.WebGPU.Internals : 'window.WebGPU undefined');
+              console.error('🔍 SCOPE TEST: WebGPU === window.WebGPU =', WebGPU === window.WebGPU);
+              console.error('🔍 SCOPE TEST: this.WebGPU =', this.WebGPU);
+              console.error('🔍 SCOPE TEST: globalThis.WebGPU =', globalThis.WebGPU);
+
+              // 🔧 SCOPE FIX: Use window.WebGPU (our registry) instead of WebGPU (Emscripten's object)
+              if (typeof window.WebGPU !== 'undefined' && !window.WebGPU.Internals) {
+                console.error('🔧 REGISTRY FIX: window.WebGPU.Internals missing at registration time, recreating...');
+                window.ensureWebGPUInternals();
+                console.error('🔧 REGISTRY DEBUG: After ensureWebGPUInternals - window.WebGPU.Internals =', window.WebGPU.Internals);
+              }
+
+              if (typeof window.WebGPU !== 'undefined' && window.WebGPU.Internals) {
+                const handle = window._webgpu_buffer_size_fix.bufferHandleCounter++;
+                window.WebGPU.Internals.jsObjectInsert(handle, result);
+                console.error('🔧 REGISTRY FIX: Registered buffer with handle=' + handle + ' in WebGPU registry (no fix case)');
+
+                // Store the handle so C++ can retrieve it
+                window._webgpu_buffer_size_fix.lastCreatedHandle = handle;
+              } else {
+                console.error('🚨 REGISTRY ERROR: window.WebGPU registry not available for buffer registration');
+                console.error('🚨 REGISTRY ERROR: typeof window.WebGPU =', typeof window.WebGPU);
+                console.error('🚨 REGISTRY ERROR: window.WebGPU.Internals available =', window.WebGPU ? !!window.WebGPU.Internals : false);
+              }
+            }
+            return result;
+          } catch (err) {
+            console.error('🚨 FALLBACK PATCH: Exception in original createBuffer (no fix):', err);
+            console.error('🚨 FALLBACK PATCH: Exception stack:', err.stack);
+            throw err;
+          }
+        };
+        proto.createBuffer.__patched_for_buffer_size_fix__ = true;
+        console.log('🔧 PATCH: GPUDevice.createBuffer fallback patch installed');
+      }
+    }
+  }
 })();
 
 // 🔔 WATCH & CALL NATIVE CALLBACKS WHEN THEY APPEAR

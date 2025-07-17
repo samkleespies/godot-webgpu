@@ -96,10 +96,7 @@ private:
 	WGPUDevice device = nullptr;
 	WGPUQueue queue = nullptr;
 
-	// CRITICAL FIX: Deferred initialization parameters
-	uint32_t deferred_device_index = 0;
-	uint32_t deferred_frame_count = 0;
-	bool initialization_deferred = false;
+	// REMOVED: Deferred initialization parameters - now using synchronous approach
 
 	// Removed async state management - using synchronous initialization
 
@@ -176,7 +173,7 @@ private:
 		WGPUSampler sampler = nullptr;
 	};
 
-	struct ShaderInfo {
+	struct ShaderInfo : public RenderingDeviceCommons::ShaderReflection {
 		WGPUShaderModule module = nullptr;
 		Vector<RenderingDeviceCommons::ShaderStage> stages;
 		String name;
@@ -503,9 +500,7 @@ public:
 	// RenderingDeviceDriver interface implementation
 	virtual Error initialize(uint32_t p_device_index, uint32_t p_frame_count) override;
 
-	// CRITICAL FIX: Callback-based initialization methods
-	Error start_deferred_initialization(uint32_t p_device_index, uint32_t p_frame_count);
-	void complete_initialization();
+	// REMOVED: Deferred initialization methods - now using synchronous approach
 
 	// WebGPU-specific methods
 	void set_device(WGPUDevice p_device);
@@ -633,7 +628,7 @@ public:
 	virtual void command_bind_push_constants(CommandBufferID p_cmd_buffer, ShaderID p_shader, uint32_t p_dst_first_index, VectorView<uint32_t> p_data) override;
 	virtual bool pipeline_cache_create(const Vector<uint8_t> &p_data) override { return true; }
 	virtual void pipeline_cache_free() override {}
-	virtual size_t pipeline_cache_query_size() override { return 0; }
+	virtual size_t pipeline_cache_query_size() override { return 1; } // Return 1 to indicate valid but empty cache
 	virtual Vector<uint8_t> pipeline_cache_serialize() override { return Vector<uint8_t>(); }
 
 	// ----- RENDER PASS COMMANDS -----

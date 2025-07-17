@@ -112,20 +112,20 @@ bool RenderingContextDriverWebGPU::device_supports_present(uint32_t p_device_ind
 
 RenderingDeviceDriver *RenderingContextDriverWebGPU::driver_create() {
 	// VALIDATION LOG: This is where the error occurs!
-	printf("🔍 VALIDATION: RenderingContextDriverWebGPU::driver_create() ENTRY - THIS IS WHERE THE ERROR OCCURS!\n");
-	print_error("🔍 VALIDATION: RenderingContextDriverWebGPU::driver_create() ENTRY - THIS IS WHERE THE ERROR OCCURS!");
+	printf("\U0001F50D VALIDATION: RenderingContextDriverWebGPU::driver_create() ENTRY - THIS IS WHERE THE ERROR OCCURS!\n");
+	print_error("\U0001F50D VALIDATION: RenderingContextDriverWebGPU::driver_create() ENTRY - THIS IS WHERE THE ERROR OCCURS!");
 	print_line("Creating WebGPU device driver");
 
 	// Create the WebGPU device driver (device will be set when available)
-	printf("🔍 VALIDATION: About to create RenderingDeviceDriverWebGPU instance\n");
-	print_error("🔍 VALIDATION: About to create RenderingDeviceDriverWebGPU instance");
+	printf("\U0001F50D VALIDATION: About to create RenderingDeviceDriverWebGPU instance\n");
+	print_error("\U0001F50D VALIDATION: About to create RenderingDeviceDriverWebGPU instance");
 	RenderingDeviceDriverWebGPU *webgpu_driver = memnew(RenderingDeviceDriverWebGPU);
-	printf("🔍 VALIDATION: RenderingDeviceDriverWebGPU instance created successfully\n");
-	print_error("🔍 VALIDATION: RenderingDeviceDriverWebGPU instance created successfully");
+	printf("\U0001F50D VALIDATION: RenderingDeviceDriverWebGPU instance created successfully\n");
+	print_error("\U0001F50D VALIDATION: RenderingDeviceDriverWebGPU instance created successfully");
 
 	// Try to get the WebGPU device from Emscripten if available
-	printf("🔍 VALIDATION: About to access context device member\n");
-	print_error("🔍 VALIDATION: About to access context device member");
+	printf("\U0001F50D VALIDATION: About to access context device member\n");
+	print_error("\U0001F50D VALIDATION: About to access context device member");
 	WGPUDevice actual_device = device;
 
 	EM_ASM({
@@ -135,8 +135,8 @@ RenderingDeviceDriver *RenderingContextDriverWebGPU::driver_create() {
 
 #ifdef __EMSCRIPTEN__
 	if (!actual_device) {
-		print_line("🔧 CONTEXT FIX: Context device is null - SKIPPING emscripten_webgpu_get_device() call");
-		print_line("🔧 CONTEXT FIX: Device will be set later via callback system when ready");
+		print_line("\U0001F527 CONTEXT FIX: Context device is null - SKIPPING emscripten_webgpu_get_device() call");
+		print_line("\U0001F527 CONTEXT FIX: Device will be set later via callback system when ready");
 
 		// CRITICAL FIX: Do NOT call emscripten_webgpu_get_device() here!
 		// This is what causes the crash. The device will be set via the callback system.

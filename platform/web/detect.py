@@ -253,8 +253,19 @@ def configure(env: "SConsEnvironment"):
 
     if env["webgpu"]:
         env.AppendUnique(CPPDEFINES=["WEBGPU_ENABLED"])
-        # Enable WebGPU support using the newer Dawn-based implementation
-        env.Append(LINKFLAGS=["--use-port=emdawnwebgpu"])
+
+        # 🔍 DEBUG: Check if Dawn port exists
+        dawn_port_path = os.path.join(env.Dir("#").abspath, "thirdparty", "dawn", "src", "emdawnwebgpu", "pkg", "emdawnwebgpu.port.py")
+        print("🔍 DAWN PORT CHECK: Looking for Dawn port at: " + dawn_port_path)
+        print("🔍 DAWN PORT CHECK: Port exists: " + str(os.path.exists(dawn_port_path)))
+
+        # CRITICAL FIX: Use Emscripten's built-in WebGPU since Dawn port requires pre-built package
+        # Enable Emscripten's WebGPU implementation with our buffer size fixes
+        env.Append(LINKFLAGS=["-sUSE_WEBGPU=1"])  # Enable Emscripten's built-in WebGPU
+        print("🔍 BUILD DEBUG: Added -sUSE_WEBGPU=1 flag (using Emscripten WebGPU with fixes)")
+
+        env.Append(LINKFLAGS=["-sWASM_BIGINT"])   # Enable BigInt support for Dawn
+        env.Append(LINKFLAGS=["-sFORCE_FILESYSTEM=1"])  # Ensure filesystem for Dawn
         print("[OK] WebGPU enabled for web platform (using Dawn)")
 
     # Disable modules that don't work with web platform

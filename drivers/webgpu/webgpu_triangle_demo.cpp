@@ -208,6 +208,7 @@ void WebGPUTriangleDemo::render(WGPUTextureView p_target_view) {
 	// Create render pass
 	WGPURenderPassColorAttachment color_attachment = {};
 	color_attachment.view = p_target_view;
+	color_attachment.depthSlice = 0; // CRITICAL FIX: Initialize depthSlice to 0 for 2D attachments
 	color_attachment.loadOp = WGPULoadOp_Clear;
 	color_attachment.storeOp = WGPUStoreOp_Store;
 	color_attachment.clearValue = {0.0f, 0.0f, 0.0f, 1.0f}; // Black background

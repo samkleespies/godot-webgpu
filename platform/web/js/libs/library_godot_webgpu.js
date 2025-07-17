@@ -64,84 +64,26 @@ const GodotWebGPU = {
 
 				GodotRuntime.print('✅ Canvas found with ID:', cleanId);
 
-				// CRITICAL FIX: Create WebGPU device SYNCHRONOUSLY
-				// The display server needs the device to be ready before proceeding
-				GodotRuntime.print('🔧 CRITICAL FIX: Starting SYNCHRONOUS WebGPU device creation...');
+				// CRITICAL FIX: Use the pre-created device from pre_wgpu.js
+				// The device should already be available due to run dependency system
+				if (Module.preinitializedWebGPUDevice) {
+					GodotRuntime.print('✅ Using pre-initialized WebGPU device from Module.preinitializedWebGPUDevice');
 
-				// Use synchronous approach with busy wait
-				let deviceReady = false;
-				let deviceError = null;
-				let createdDevice = null;
+					// Ensure device is also stored in GodotWebGPU object
+					GodotWebGPU.device = Module.preinitializedWebGPUDevice;
+					GodotWebGPU.queue = Module.preinitializedWebGPUDevice.queue;
 
-				// Start async device creation
-				navigator.gpu.requestAdapter({
-					powerPreference: 'high-performance',
-					forceFallbackAdapter: false
-				}).then(adapter => {
-					if (!adapter) {
-						throw new Error('No WebGPU adapter found');
-					}
-					GodotRuntime.print('🔧 WebGPU adapter obtained');
-					return adapter.requestDevice({
-						requiredFeatures: [],
-						requiredLimits: {}
-					});
-				}).then(device => {
-					GodotRuntime.print('🔧 WebGPU device created successfully');
-					createdDevice = device;
-
-					// Store device in all expected locations
-					GodotWebGPU.device = device;
-					GodotWebGPU.queue = device.queue;
-					Module.preinitializedWebGPUDevice = device;
-					Module.webgpu = Module.webgpu || {};
-					Module.webgpu.device = device;
-					Module.webgpu.queue = device.queue;
-
-					GodotRuntime.print('🔧 Device stored in Module.preinitializedWebGPUDevice for Emscripten');
-
-					// CRITICAL FIX: Call C++ callback to notify that device is ready
-					GodotRuntime.print('🔧 CALLBACK: Calling C++ callback to notify device is ready');
-					if (typeof Module._godot_webgpu_device_ready_callback === 'function') {
-						try {
-							Module._godot_webgpu_device_ready_callback();
-							GodotRuntime.print('🔧 CALLBACK: C++ callback executed successfully');
-						} catch (err) {
-							GodotRuntime.error('🔧 CALLBACK: Failed to call C++ callback:', err);
-						}
-					} else {
-						GodotRuntime.print('🔧 CALLBACK: C++ callback function not available yet');
-					}
-
-					deviceReady = true;
-				}).catch(err => {
-					GodotRuntime.error('Failed to create WebGPU device:', err);
-					deviceError = err;
-					deviceReady = true; // Mark as ready even on error
-				});
-
-				// CRITICAL FIX: Wait synchronously for device creation to complete
-				GodotRuntime.print('🔧 SYNC WAIT: Waiting for WebGPU device creation to complete...');
-				const startTime = performance.now();
-				const timeout = 10000; // 10 second timeout
-
-				while (!deviceReady && (performance.now() - startTime) < timeout) {
-					// Busy wait for device creation to complete
-					// This blocks the main thread but ensures device is ready before returning
+					return true;
 				}
 
-				if (deviceError) {
-					GodotRuntime.error('🔧 SYNC WAIT: WebGPU device creation failed:', deviceError);
-					return false;
-				}
+				// CRITICAL FIX: If we get here, the run dependency system failed
+				// This means the device creation is still in progress or failed
+				// We should NOT block the main thread with a busy wait as that prevents Promises from resolving
+				GodotRuntime.error('❌ No pre-initialized WebGPU device found - run dependency system failed');
+				GodotRuntime.error('❌ Device creation may still be in progress asynchronously');
+				GodotRuntime.error('❌ Falling back to OpenGL - WebGPU will be available later if creation succeeds');
 
-				if (!deviceReady || !createdDevice) {
-					GodotRuntime.error('🔧 SYNC WAIT: WebGPU device creation timed out');
-					return false;
-				}
-
-				GodotRuntime.print('✅ WebGPU device created and ready SYNCHRONOUSLY');
-				return true;
+				return false;
 
 			} catch (error) {
 				GodotRuntime.error('WebGPU initialization failed:', error);
