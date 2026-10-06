@@ -4203,7 +4203,12 @@ Error GLTFDocument::_parse_images(Ref<GLTFState> p_state, const String &p_base_p
 				// there could be a `.png` image which is actually JPEG), but there's no easy
 				// API for that in Godot, so we'd have to load as a buffer (i.e. embedded in
 				// the material), so we only do that only as fallback.
-				if (ResourceLoader::exists(resource_uri)) {
+				// Editor extraction must copy textures out of the internal import cache.
+				// Loading an existing resource here would bypass _parse_image_save_image.
+				const bool must_extract = Engine::get_singleton()->is_editor_hint() &&
+						p_state->handle_binary_image == GLTFState::HANDLE_BINARY_EXTRACT_TEXTURES &&
+						resource_uri.begins_with("res://.godot/imported/");
+				if (!must_extract && ResourceLoader::exists(resource_uri)) {
 					Ref<Texture2D> texture = ResourceLoader::load(resource_uri, "Texture2D");
 					if (texture.is_valid()) {
 						p_state->images.push_back(texture);
