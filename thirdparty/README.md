@@ -446,6 +446,10 @@ Files extracted from upstream source:
   - All the `.cc`, `.h`, `.hh` files
   - Except `main.cc`, `harfbuzz*.cc`, `failing-alloc.c`, `test*.cc`, `hb-wasm*.*`, `wasm/*`
 
+Local modifications:
+
+- Compare serialized cmap lengths directly to avoid unsigned subtraction underflow. See `patches/0001-cmap-serialization-growth.patch`.
+
 
 ## hidapi
 
