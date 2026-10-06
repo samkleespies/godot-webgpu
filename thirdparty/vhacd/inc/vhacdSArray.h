@@ -81,9 +81,12 @@ public:
             size_t maxSize = (m_maxSize << 1);
             T* temp = new T[maxSize];
             memcpy(temp, Data(), m_maxSize * sizeof(T));
+            // value may alias storage invalidated by the reallocation.
+            temp[m_size++] = value;
             delete[] m_data;
             m_data = temp;
             m_maxSize = maxSize;
+            return;
         }
         T* const data = Data();
         data[m_size++] = value;
