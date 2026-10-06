@@ -302,17 +302,19 @@ void SceneTree::_flush_accessibility_changes() {
 
 void SceneTree::_flush_ugc() {
 	ugc_locked = true;
+	LocalVector<const Variant *> argptrs;
 
 	while (unique_group_calls.size()) {
 		HashMap<UGCall, Vector<Variant>, UGCall>::Iterator E = unique_group_calls.begin();
 
-		const Variant **argptrs = (const Variant **)alloca(E->value.size() * sizeof(Variant *));
+		// Reuse storage instead of growing the stack for every queued group call.
+		argptrs.resize(E->value.size());
 
 		for (int i = 0; i < E->value.size(); i++) {
 			argptrs[i] = &E->value[i];
 		}
 
-		call_group_flagsp(GROUP_CALL_DEFAULT, E->key.group, E->key.call, argptrs, E->value.size());
+		call_group_flagsp(GROUP_CALL_DEFAULT, E->key.group, E->key.call, argptrs.ptr(), E->value.size());
 
 		unique_group_calls.remove(E);
 	}
