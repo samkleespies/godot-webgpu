@@ -137,7 +137,12 @@ jobs:
           name: ${{ matrix.cache-name }}
 
       - name: Unit tests
+        timeout-minutes: 10
+        env:
+          GODOT_TEST_PROGRESS: "1"
         run: |
           ${{ matrix.bin }} --version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           ${{ matrix.bin }} --help
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           ${{ matrix.bin }} --test --force-colors

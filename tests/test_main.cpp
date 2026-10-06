@@ -300,6 +300,7 @@ int test_main(int argc, char *argv[]) {
 
 struct GodotTestCaseListener : public doctest::IReporter {
 	GodotTestCaseListener(const doctest::ContextOptions &p_in) {}
+	const bool print_progress = OS::get_singleton()->get_environment("GODOT_TEST_PROGRESS") == "1";
 
 	SignalWatcher *signal_watcher = nullptr;
 
@@ -318,6 +319,10 @@ struct GodotTestCaseListener : public doctest::IReporter {
 #endif // NAVIGATION_3D_DISABLED
 
 	void test_case_start(const doctest::TestCaseData &p_in) override {
+		if (print_progress) {
+			fprintf(stderr, "[test] %s\n", p_in.m_name);
+			fflush(stderr);
+		}
 		reinitialize();
 
 		String name = String(p_in.m_name);
@@ -523,7 +528,11 @@ struct GodotTestCaseListener : public doctest::IReporter {
 		reinitialize();
 	}
 
-	void subcase_start(const doctest::SubcaseSignature &) override {
+	void subcase_start(const doctest::SubcaseSignature &p_in) override {
+		if (print_progress) {
+			fprintf(stderr, "[subcase] %s\n", p_in.m_name.c_str());
+			fflush(stderr);
+		}
 		reinitialize();
 	}
 
