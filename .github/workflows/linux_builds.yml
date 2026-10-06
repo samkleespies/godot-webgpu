@@ -112,7 +112,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          # Only the top-level Dawn port and emsdk sources are used.
+          # Dawn's nested conformance tests include private Google repositories.
+          submodules: true
 
       - name: Linux dependencies for tests
         if: matrix.proj-test
