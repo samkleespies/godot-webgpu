@@ -462,13 +462,11 @@ RID RendererCanvasRenderRD::_create_base_uniform_set(RID p_to_render_target, boo
 
 	material_storage->samplers_rd_get_default().append_uniforms(uniforms, SAMPLERS_BINDING_FIRST_INDEX);
 
-	printf("🚨🚨🚨 VALIDATION #4: About to create BASE uniform set - shader: %llu, uniforms count: %u\n", shader.default_version_rd_shader.get_id(), (uint32_t)uniforms.size());
 	print_error("🚨🚨🚨 VALIDATION #4: About to create BASE uniform set - shader: " + itos(shader.default_version_rd_shader.get_id()) + ", uniforms count: " + itos(uniforms.size()));
 
 	RID uniform_set = RD::get_singleton()->uniform_set_create(uniforms, shader.default_version_rd_shader, BASE_UNIFORM_SET);
 
 	if (uniform_set.is_valid()) {
-		printf("🚨🚨🚨 VALIDATION #4: SUCCESS - BASE uniform set created successfully: %llu\n", uniform_set.get_id());
 		print_error("🚨🚨🚨 VALIDATION #4: SUCCESS - BASE uniform set created successfully: " + itos(uniform_set.get_id()));
 	} else {
 		printf("🚨🚨🚨 VALIDATION #4: ERROR - BASE uniform set creation FAILED!\n");
@@ -3095,13 +3093,11 @@ void RendererCanvasRenderRD::_render_batch(RD::DrawListID p_draw_list, CanvasSha
 			uniform_ptrw[3] = RD::Uniform(RD::UNIFORM_TYPE_SAMPLER, 3, p_batch->tex_info->sampler);
 			uniform_ptrw[4] = RD::Uniform(RD::UNIFORM_TYPE_STORAGE_BUFFER, 4, state.canvas_instance_data_buffers[state.current_data_buffer_index].instance_buffers[p_batch->instance_buffer_index]);
 
-			printf("🚨🚨🚨 VALIDATION #4: About to create BATCH uniform set - shader: %llu, uniforms count: %u\n", shader.default_version_rd_shader.get_id(), (uint32_t)state.batch_texture_uniforms.size());
 			print_error("🚨🚨🚨 VALIDATION #4: About to create BATCH uniform set - shader: " + itos(shader.default_version_rd_shader.get_id()) + ", uniforms count: " + itos(state.batch_texture_uniforms.size()));
 
 			RID rid = RD::get_singleton()->uniform_set_create(state.batch_texture_uniforms, shader.default_version_rd_shader, BATCH_UNIFORM_SET);
 
 			if (rid.is_valid()) {
-				printf("🚨🚨🚨 VALIDATION #4: SUCCESS - BATCH uniform set created successfully: %llu\n", rid.get_id());
 				print_error("🚨🚨🚨 VALIDATION #4: SUCCESS - BATCH uniform set created successfully: " + itos(rid.get_id()));
 			} else {
 				printf("🚨🚨🚨 VALIDATION #4: ERROR - BATCH uniform set creation FAILED!\n");
