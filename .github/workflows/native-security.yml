@@ -7,6 +7,15 @@ on:
 permissions:
   contents: read
 jobs:
+  ide-logging:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 8.0.x
+      - run: dotnet run --project tests/dotnet/ide_logging/ide_logging.csproj --configuration Release
+
   sanitizers:
     runs-on: ${{ matrix.os }}
     strategy:

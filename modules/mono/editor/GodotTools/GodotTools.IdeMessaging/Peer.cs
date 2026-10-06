@@ -97,11 +97,11 @@ namespace GodotTools.IdeMessaging
 
                     if (state == MessageDecoder.State.Errored)
                     {
-                        Logger.LogError($"Received message line with invalid format: {messageLine}");
+                        Logger.LogError($"Received message line with invalid format: {LogMessage.Escape(messageLine)}");
                         continue;
                     }
 
-                    Logger.LogDebug($"Received message: {msg}");
+                    Logger.LogDebug($"Received message: {LogMessage.Escape(msg?.ToString())}");
 
                     try
                     {
@@ -118,7 +118,7 @@ namespace GodotTools.IdeMessaging
                             {
                                 if (!requestAwaiterQueues.TryGetValue(msg.Id, out var queue) || queue.Count <= 0)
                                 {
-                                    Logger.LogError($"Received unexpected response: {msg.Id}");
+                                    Logger.LogError($"Received unexpected response: {LogMessage.Escape(msg.Id)}");
                                     return;
                                 }
 
@@ -134,7 +134,7 @@ namespace GodotTools.IdeMessaging
                     }
                     catch (Exception e)
                     {
-                        Logger.LogError($"Message handler for '{msg}' failed with exception", e);
+                        Logger.LogError($"Message handler for '{LogMessage.Escape(msg?.ToString())}' failed with exception", e);
                     }
                 }
             }
@@ -167,7 +167,7 @@ namespace GodotTools.IdeMessaging
 
             if (peerHandshake == null || !handshake.IsValidPeerHandshake(peerHandshake, out remoteIdentity, Logger))
             {
-                Logger.LogError("Received invalid handshake: " + peerHandshake);
+                Logger.LogError("Received invalid handshake: " + LogMessage.Escape(peerHandshake));
                 return false;
             }
 
@@ -200,7 +200,7 @@ namespace GodotTools.IdeMessaging
 
         private Task<bool> WriteMessage(Message message)
         {
-            Logger.LogDebug($"Sending message: {message}");
+            Logger.LogDebug($"Sending message: {LogMessage.Escape(message.ToString())}");
             int bodyLineCount = message.Content.Body.Count(c => c == '\n');
 
             bodyLineCount += 1; // Extra line break at the end
