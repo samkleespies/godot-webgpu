@@ -110,6 +110,7 @@ jobs:
         run: unzip -o accesskit-c-0.16.0/accesskit_c.zip
 
       - name: Compilation
+        id: compilation
         uses: ./.github/actions/godot-build
         with:
           scons-flags: ${{ env.SCONS_FLAGS }} ${{ matrix.scons-flags }}
@@ -117,6 +118,8 @@ jobs:
           target: ${{ matrix.target }}
 
       - name: Save Godot build cache
+        # Preserve completed objects when a later source file fails to compile.
+        if: ${{ !cancelled() && (steps.compilation.outcome == 'success' || steps.compilation.outcome == 'failure') }}
         uses: ./.github/actions/godot-cache-save
         with:
           cache-name: ${{ matrix.cache-name }}

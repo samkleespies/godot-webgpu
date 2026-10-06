@@ -264,11 +264,15 @@ Vector<Vector<Point2>> Geometry2D::_polypaths_do_operation(PolyBooleanOperation 
 			break;
 	}
 
-	PathD path_a(p_polypath_a.size());
+	PathsD subjects(1);
+	PathD &path_a = subjects[0];
+	path_a.resize(p_polypath_a.size());
 	for (int i = 0; i != p_polypath_a.size(); ++i) {
 		path_a[i] = PointD(p_polypath_a[i].x, p_polypath_a[i].y);
 	}
-	PathD path_b(p_polypath_b.size());
+	PathsD clips(1);
+	PathD &path_b = clips[0];
+	path_b.resize(p_polypath_b.size());
 	for (int i = 0; i != p_polypath_b.size(); ++i) {
 		path_b[i] = PointD(p_polypath_b[i].x, p_polypath_b[i].y);
 	}
@@ -276,11 +280,11 @@ Vector<Vector<Point2>> Geometry2D::_polypaths_do_operation(PolyBooleanOperation 
 	ClipperD clp(clipper_precision); // Scale points up internally to attain the desired precision.
 	clp.PreserveCollinear(false); // Remove redundant vertices.
 	if (is_a_open) {
-		clp.AddOpenSubject({ path_a });
+		clp.AddOpenSubject(subjects);
 	} else {
-		clp.AddSubject({ path_a });
+		clp.AddSubject(subjects);
 	}
-	clp.AddClip({ path_b });
+	clp.AddClip(clips);
 
 	PathsD paths;
 
@@ -341,13 +345,15 @@ Vector<Vector<Point2>> Geometry2D::_polypath_offset(const Vector<Point2> &p_poly
 			break;
 	}
 
-	PathD polypath(p_polypath.size());
+	PathsD input_paths(1);
+	PathD &polypath = input_paths[0];
+	polypath.resize(p_polypath.size());
 	for (int i = 0; i != p_polypath.size(); ++i) {
 		polypath[i] = PointD(p_polypath[i].x, p_polypath[i].y);
 	}
 
 	// Inflate/deflate.
-	PathsD paths = InflatePaths({ polypath }, p_delta, jt, et, 2.0, clipper_precision, 0.25 * clipper_scale);
+	PathsD paths = InflatePaths(input_paths, p_delta, jt, et, 2.0, clipper_precision, 0.25 * clipper_scale);
 	// Here the points are scaled up internally and
 	// the arc_tolerance is scaled accordingly
 	// to attain the desired precision.
