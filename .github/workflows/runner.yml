@@ -1,3 +1,6 @@
+permissions:
+  contents: read
+
 name: 🔗 GHA
 on: [push, pull_request, merge_group]
 

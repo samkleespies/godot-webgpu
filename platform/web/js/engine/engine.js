@@ -177,12 +177,12 @@ const Engine = (function () {
 						function waitForRunDependencies() {
 							const module = me.rtenv;
 							if (module.runDependencies && module.runDependencies > 0) {
-								console.log(`🔧 ENGINE: Waiting for ${module.runDependencies} run dependencies before starting main...`);
+								me.config.onPrint(`🔧 ENGINE: Waiting for ${module.runDependencies} run dependencies before starting main...`);
 								setTimeout(waitForRunDependencies, 10);
 								return;
 							}
 
-							console.log('🔧 ENGINE: All run dependencies resolved, starting main...');
+							me.config.onPrint('🔧 ENGINE: All run dependencies resolved, starting main...');
 							me.rtenv['callMain'](me.config.args);
 							initPromise = null;
 							me.installServiceWorker();

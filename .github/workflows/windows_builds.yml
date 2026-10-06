@@ -1,3 +1,6 @@
+permissions:
+  contents: read
+
 name: 🏁 Windows Builds
 on:
   workflow_call:

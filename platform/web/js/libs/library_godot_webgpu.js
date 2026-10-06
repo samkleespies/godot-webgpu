@@ -36,20 +36,20 @@ const GodotWebGPU = {
 		context: null,
 		canvas: null,
 
-		isSupported: function() {
+		isSupported: function () {
 			return 'gpu' in navigator;
 		},
 
-		init: function(canvasId) {
-			console.log('🔧 CRITICAL DEBUG: GodotWebGPU.init() function CALLED with canvasId:', canvasId);
+		init: function (canvasId) {
+			GodotRuntime.print('🔧 CRITICAL DEBUG: GodotWebGPU.init() function CALLED with canvasId:', canvasId);
 
 			if (!GodotWebGPU.isSupported()) {
-				console.log('🔧 CRITICAL DEBUG: WebGPU is NOT supported in this browser');
+				GodotRuntime.print('🔧 CRITICAL DEBUG: WebGPU is NOT supported in this browser');
 				GodotRuntime.error('WebGPU is not supported in this browser');
 				return false;
 			}
 
-			console.log('🔧 CRITICAL DEBUG: WebGPU is supported, proceeding with initialization');
+			GodotRuntime.print('🔧 CRITICAL DEBUG: WebGPU is supported, proceeding with initialization');
 
 			try {
 				// Remove # prefix if present (canvasId might be "#canvas" or "canvas")
@@ -84,62 +84,59 @@ const GodotWebGPU = {
 				GodotRuntime.error('❌ Falling back to OpenGL - WebGPU will be available later if creation succeeds');
 
 				return false;
-
 			} catch (error) {
 				GodotRuntime.error('WebGPU initialization failed:', error);
 				return false;
 			}
 		},
 
-
-
-		getDevice: function() {
+		getDevice: function () {
 			return GodotWebGPU.device;
 		},
 
-		getContext: function() {
+		getContext: function () {
 			return GodotWebGPU.context;
 		},
 
-		getCurrentTexture: function() {
+		getCurrentTexture: function () {
 			if (!GodotWebGPU.context) {
 				return null;
 			}
 			return GodotWebGPU.context.getCurrentTexture();
 		},
 
-		present: function() {
+		present: function () {
 			// WebGPU automatically presents when the current texture is used
 			// No explicit present call needed
-		}
+		},
 	},
 
 	godot_js_webgpu_is_supported__sig: 'i',
-	godot_js_webgpu_is_supported: function() {
+	godot_js_webgpu_is_supported: function () {
 		return GodotWebGPU.isSupported() ? 1 : 0;
 	},
 
 	godot_js_webgpu_init__sig: 'ii',
-	godot_js_webgpu_init: function(canvasIdPtr) {
-		console.log('🔧 CRITICAL DEBUG: godot_js_webgpu_init() JavaScript function CALLED!');
+	godot_js_webgpu_init: function (canvasIdPtr) {
+		GodotRuntime.print('🔧 CRITICAL DEBUG: godot_js_webgpu_init() JavaScript function CALLED!');
 		const canvasId = GodotRuntime.parseString(canvasIdPtr);
-		console.log('🔧 CRITICAL DEBUG: Canvas ID parsed:', canvasId);
+		GodotRuntime.print('🔧 CRITICAL DEBUG: Canvas ID parsed:', canvasId);
 		const result = GodotWebGPU.init(canvasId);
-		console.log('🔧 CRITICAL DEBUG: GodotWebGPU.init() returned:', result);
+		GodotRuntime.print('🔧 CRITICAL DEBUG: GodotWebGPU.init() returned:', result);
 		return result ? 1 : 0;
 	},
 
 	godot_js_webgpu_get_device__sig: 'i',
-	godot_js_webgpu_get_device: function() {
+	godot_js_webgpu_get_device: function () {
 		// Return a pointer/handle to the WebGPU device
 		// This would need to be handled by the WebGPU implementation
 		return GodotWebGPU.device ? 1 : 0;
 	},
 
 	godot_js_webgpu_present__sig: 'v',
-	godot_js_webgpu_present: function() {
+	godot_js_webgpu_present: function () {
 		GodotWebGPU.present();
-	}
+	},
 };
 
 autoAddDeps(GodotWebGPU, '$GodotWebGPU');
