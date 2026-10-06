@@ -237,7 +237,7 @@ namespace basisu
 			{
 				debug_printf("m_source_mipmap_images array sizes:\n");
 				for (uint32_t i = 0; i < m_params.m_source_mipmap_images.size(); i++)
-					debug_printf("%u ", m_params.m_source_mipmap_images[i].size());
+					debug_printf("%zu ", m_params.m_source_mipmap_images[i].size());
 				debug_printf("\n");
 			}
 
@@ -245,7 +245,7 @@ namespace basisu
 			{
 				debug_printf("m_source_mipmap_images_hdr array sizes:\n");
 				for (uint32_t i = 0; i < m_params.m_source_mipmap_images_hdr.size(); i++)
-					debug_printf("%u ", m_params.m_source_mipmap_images_hdr[i].size());
+					debug_printf("%zu ", m_params.m_source_mipmap_images_hdr[i].size());
 				debug_printf("\n");
 			}
 
@@ -337,7 +337,7 @@ namespace basisu
 			debug_printf("Has global codebooks: %u\n", m_params.m_pGlobal_codebooks ? 1 : 0);
 			if (m_params.m_pGlobal_codebooks)
 			{
-				debug_printf("Global codebook endpoints: %u selectors: %u\n", m_params.m_pGlobal_codebooks->get_endpoints().size(), m_params.m_pGlobal_codebooks->get_selectors().size());
+				debug_printf("Global codebook endpoints: %zu selectors: %zu\n", m_params.m_pGlobal_codebooks->get_endpoints().size(), m_params.m_pGlobal_codebooks->get_selectors().size());
 			}
 
 			PRINT_BOOL_VALUE(m_create_ktx2_file);
@@ -345,11 +345,11 @@ namespace basisu
 			debug_printf("KTX2 UASTC supercompression: %u\n", m_params.m_ktx2_uastc_supercompression);
 			debug_printf("KTX2 Zstd supercompression level: %i\n", (int)m_params.m_ktx2_zstd_supercompression_level);
 			debug_printf("KTX2 sRGB transfer func: %u\n", (int)m_params.m_ktx2_srgb_transfer_func);
-			debug_printf("Total KTX2 key values: %u\n", m_params.m_ktx2_key_values.size());
+			debug_printf("Total KTX2 key values: %zu\n", m_params.m_ktx2_key_values.size());
 			for (uint32_t i = 0; i < m_params.m_ktx2_key_values.size(); i++)
 			{
 				debug_printf("Key: \"%s\"\n", m_params.m_ktx2_key_values[i].m_key.data());
-				debug_printf("Value size: %u\n", m_params.m_ktx2_key_values[i].m_value.size());
+				debug_printf("Value size: %zu\n", m_params.m_ktx2_key_values[i].m_value.size());
 			}
 
 			PRINT_BOOL_VALUE(m_validate_output_data);
@@ -1903,7 +1903,7 @@ namespace basisu
 				m_stats[dest_image_index].m_width = orig_width;
 				m_stats[dest_image_index].m_height = orig_height;
 
-				debug_printf("****** Slice %u: mip %u, alpha_slice: %u, filename: \"%s\", original: %ux%u actual: %ux%u\n", 
+				debug_printf("****** Slice %zu: mip %u, alpha_slice: %u, filename: \"%s\", original: %ux%u actual: %ux%u\n",
 					m_slice_descs.size() - 1, mip_indices[slice_index], is_alpha_slice, source_filename.c_str(), 
 					orig_width, orig_height, 
 					m_params.m_hdr ? pSlice_image_hdr->get_width() : pSlice_image->get_width(), 
@@ -2495,7 +2495,7 @@ namespace basisu
 		m_basis_file_size = (uint32_t)comp_data.size();
 		m_basis_bits_per_texel = total_orig_pixels ? (comp_data.size() * 8.0f) / total_orig_pixels : 0;
 
-		debug_printf("Total .basis output file size: %u, %3.3f bits/texel\n", comp_data.size(), comp_data.size() * 8.0f / total_orig_pixels);
+		debug_printf("Total .basis output file size: %zu, %3.3f bits/texel\n", comp_data.size(), comp_data.size() * 8.0f / total_orig_pixels);
 
 		// HDR 6x6 TODO
 		// HACK HACK
@@ -3894,7 +3894,7 @@ namespace basisu
 			total_orig_pixels += slice_desc.m_orig_width * slice_desc.m_orig_height;
 		}
 
-		debug_printf("Total .ktx2 output file size: %u, %3.3f bits/texel\n", m_output_ktx2_file.size(), ((float)m_output_ktx2_file.size() * 8.0f) / total_orig_pixels);
+		debug_printf("Total .ktx2 output file size: %zu, %3.3f bits/texel\n", m_output_ktx2_file.size(), ((float)m_output_ktx2_file.size() * 8.0f) / total_orig_pixels);
 
 		return true;
 	}

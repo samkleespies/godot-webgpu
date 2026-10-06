@@ -55,7 +55,7 @@ namespace basisu
 		m_params = params;
 		m_slices = slice_descs;
 		
-		debug_printf("basisu_backend::Init: Slices: %u, ETC1S: %u, EndpointRDOQualityThresh: %f, SelectorRDOQualityThresh: %f\n",
+		debug_printf("basisu_backend::Init: Slices: %zu, ETC1S: %u, EndpointRDOQualityThresh: %f, SelectorRDOQualityThresh: %f\n",
 			m_slices.size(),
 			params.m_etc1s,
 			params.m_endpoint_rdo_quality_thresh,
@@ -1467,7 +1467,7 @@ namespace basisu
 
 			total_image_bytes += (uint32_t)coder.get_bytes().size();
 
-			debug_printf("Slice %u compressed size: %u bytes, %3.3f bits per slice texel\n", slice_index, m_output.m_slice_image_data[slice_index].size(), m_output.m_slice_image_data[slice_index].size() * 8.0f / (m_slices[slice_index].m_orig_width * m_slices[slice_index].m_orig_height));
+			debug_printf("Slice %u compressed size: %zu bytes, %3.3f bits per slice texel\n", slice_index, m_output.m_slice_image_data[slice_index].size(), m_output.m_slice_image_data[slice_index].size() * 8.0f / (m_slices[slice_index].m_orig_width * m_slices[slice_index].m_orig_height));
 
 		} // slice_index
 
@@ -1478,7 +1478,7 @@ namespace basisu
 		debug_printf("Total delta endpoint bits: %u bytes: %u bits/texel: %3.3f bits/block: %3.3f\n", total_delta_endpoint_bits, total_delta_endpoint_bits / 8, total_delta_endpoint_bits / total_texels, total_delta_endpoint_bits / total_blocks);
 		debug_printf("Total selector bits: %u bytes: %u bits/texel: %3.3f bits/block: %3.3f\n", total_selector_bits, total_selector_bits / 8, total_selector_bits / total_texels, total_selector_bits / total_blocks);
 
-		debug_printf("Total table bytes: %u, %3.3f bits/texel\n", m_output.m_slice_image_tables.size(), m_output.m_slice_image_tables.size() * 8.0f / total_texels);
+		debug_printf("Total table bytes: %zu, %3.3f bits/texel\n", m_output.m_slice_image_tables.size(), m_output.m_slice_image_tables.size() * 8.0f / total_texels);
 		debug_printf("Total image bytes: %u, %3.3f bits/texel\n", total_image_bytes, total_image_bytes * 8.0f / total_texels);
 
 		return true;
@@ -1534,7 +1534,7 @@ namespace basisu
 		for (uint32_t i = 0; i < new_endpoint_was_used.size(); i++)
 			if (!new_endpoint_was_used[i])
 				total_unused_new_entries++;
-		debug_printf("basisu_backend::encode_endpoint_palette: total_unused_new_entries: %u out of %u\n", total_unused_new_entries, new_endpoint_was_used.size());
+		debug_printf("basisu_backend::encode_endpoint_palette: total_unused_new_entries: %u out of %zu\n", total_unused_new_entries, new_endpoint_was_used.size());
 
 		bool is_grayscale = true;
 		for (uint32_t old_endpoint_index = 0; old_endpoint_index < (uint32_t)m_endpoint_palette.size(); old_endpoint_index++)

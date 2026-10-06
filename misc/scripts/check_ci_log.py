@@ -9,7 +9,9 @@ if len(sys.argv) < 2:
 
 fname = sys.argv[1]
 
-with open(fname.strip(), "r", encoding="utf-8") as fileread:
+# Concurrent native output can split UTF-8 characters. Preserve ASCII error
+# markers so a decoding error cannot prevent sanitizer and crash checks.
+with open(fname.strip(), "r", encoding="utf-8", errors="replace") as fileread:
     file_contents = fileread.read()
 
 # If find "ERROR: AddressSanitizer:", then happens invalid read or write

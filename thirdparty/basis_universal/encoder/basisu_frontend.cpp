@@ -50,7 +50,7 @@ namespace basisu
 			
 	bool basisu_frontend::init(const params &p)
 	{
-		debug_printf("basisu_frontend::init: Multithreaded: %u, Job pool total threads: %u, NumEndpointClusters: %u, NumSelectorClusters: %u, Perceptual: %u, CompressionLevel: %u\n",
+		debug_printf("basisu_frontend::init: Multithreaded: %u, Job pool total threads: %zu, NumEndpointClusters: %u, NumSelectorClusters: %u, Perceptual: %u, CompressionLevel: %u\n",
 			p.m_multithreaded, p.m_pJob_pool ? p.m_pJob_pool->get_total_threads() : 0,
 			p.m_max_endpoint_clusters, p.m_max_selector_clusters, p.m_perceptual, p.m_compression_level);
 				
@@ -3198,7 +3198,7 @@ namespace basisu
 				m_encoded_blocks[block_index].set_inten_tables_etc1s(get_endpoint_cluster_inten_table(endpoint_cluster_index, false));
 			}
 
-			debug_printf("Final (post-RDO) endpoint clusters: %u\n", m_endpoint_clusters.size());
+			debug_printf("Final (post-RDO) endpoint clusters: %zu\n", m_endpoint_clusters.size());
 		}
 						
 		//debug_printf("validate_output: %u\n", validate_output());

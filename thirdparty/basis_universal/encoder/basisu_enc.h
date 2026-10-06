@@ -2220,8 +2220,8 @@ namespace basisu
 			}
 		}
 
-		//debug_printf("generate_hierarchical_codebook_threaded: %u training vectors, %u unique training vectors, %3.3f secs\n", q.get_total_training_vecs(), (uint32_t)unique_vecs.size(), tm.get_elapsed_secs());
-		debug_printf("generate_hierarchical_codebook_threaded: %u training vectors, %u unique training vectors\n", q.get_total_training_vecs(), (uint32_t)unique_vecs.size());
+		//debug_printf("generate_hierarchical_codebook_threaded: %zu training vectors, %u unique training vectors, %3.3f secs\n", q.get_total_training_vecs(), (uint32_t)unique_vecs.size(), tm.get_elapsed_secs());
+		debug_printf("generate_hierarchical_codebook_threaded: %zu training vectors, %u unique training vectors\n", q.get_total_training_vecs(), (uint32_t)unique_vecs.size());
 
 		Quantizer group_quant;
 		typedef typename group_hash::const_iterator group_hash_const_iter;
