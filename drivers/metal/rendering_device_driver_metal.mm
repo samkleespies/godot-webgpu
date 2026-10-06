@@ -1813,15 +1813,17 @@ RDD::RenderPassID RenderingDeviceDriverMetal::render_pass_create(VectorView<Atta
 		subpass.resolve_references = p_subpasses[i].resolve_references;
 	}
 
+	static_assert(ATTACHMENT_LOAD_OP_LOAD == 0 && ATTACHMENT_LOAD_OP_CLEAR == 1 && ATTACHMENT_LOAD_OP_DONT_CARE == 2);
 	static const MTLLoadAction LOAD_ACTIONS[] = {
-		[ATTACHMENT_LOAD_OP_LOAD] = MTLLoadActionLoad,
-		[ATTACHMENT_LOAD_OP_CLEAR] = MTLLoadActionClear,
-		[ATTACHMENT_LOAD_OP_DONT_CARE] = MTLLoadActionDontCare,
+		MTLLoadActionLoad,
+		MTLLoadActionClear,
+		MTLLoadActionDontCare,
 	};
 
+	static_assert(ATTACHMENT_STORE_OP_STORE == 0 && ATTACHMENT_STORE_OP_DONT_CARE == 1);
 	static const MTLStoreAction STORE_ACTIONS[] = {
-		[ATTACHMENT_STORE_OP_STORE] = MTLStoreActionStore,
-		[ATTACHMENT_STORE_OP_DONT_CARE] = MTLStoreActionDontCare,
+		MTLStoreActionStore,
+		MTLStoreActionDontCare,
 	};
 
 	Vector<MDAttachment> attachments;

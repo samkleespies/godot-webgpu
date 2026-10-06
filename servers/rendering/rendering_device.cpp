@@ -206,10 +206,10 @@ Vector<uint8_t> RenderingDevice::shader_compile_spirv_from_source(ShaderStage p_
 			// For WebGPU, we need to provide valid SPIR-V data so the shader pipeline can proceed
 			// Our WebGPU driver will convert this to WGSL using fallback shaders
 			print_verbose("🔧 WEBGPU SHADER: Generating valid minimal SPIR-V for stage: " + itos(p_stage));
-			
+
 			// Create a valid minimal SPIR-V shader that will pass reflection
 			Vector<uint8_t> minimal_spirv;
-			
+
 			// Basic vertex shader SPIR-V (simplified but valid)
 			if (p_stage == SHADER_STAGE_VERTEX) {
 				// Minimal vertex shader that outputs a position
@@ -219,54 +219,54 @@ Vector<uint8_t> RenderingDevice::shader_compile_spirv_from_source(ShaderStage p_
 					0x00000000, // Generator
 					0x0000000D, // Bound (13 IDs used)
 					0x00000000, // Schema
-					
+
 					// OpCapability Shader
 					0x00020011, 0x00000001,
-					
+
 					// OpMemoryModel Logical GLSL450
 					0x0003000E, 0x00000000, 0x00000001,
-					
+
 					// OpEntryPoint Vertex %main "main" %gl_Position
 					0x0004000F, 0x00000000, 0x00000004, 0x6E69616D,
 					0x00000000, 0x0000000C,
-					
+
 					// OpDecorate %gl_Position BuiltIn Position
 					0x00040047, 0x0000000C, 0x0000000B, 0x00000000,
-					
+
 					// OpTypeVoid
 					0x00020013, 0x00000002,
-					
+
 					// OpTypeFunction %void
 					0x00030021, 0x00000003, 0x00000002,
-					
+
 					// OpTypeFloat 32
 					0x00030016, 0x00000006, 0x00000020,
-					
+
 					// OpTypeVector %float 4
 					0x00040017, 0x00000007, 0x00000006, 0x00000004,
-					
+
 					// OpTypePointer Output %v4float
 					0x00040020, 0x0000000B, 0x00000003, 0x00000007,
-					
+
 					// OpVariable %gl_Position Output
 					0x0004003B, 0x0000000B, 0x0000000C, 0x00000003,
-					
+
 					// OpFunction %void None %3
 					0x00050036, 0x00000002, 0x00000004, 0x00000000, 0x00000003,
-					
+
 					// OpLabel
 					0x000200F8, 0x00000005,
-					
+
 					// OpReturn
 					0x000100FD,
-					
+
 					// OpFunctionEnd
 					0x00010038
 				};
-				
+
 				minimal_spirv.resize(sizeof(vertex_spirv));
 				memcpy(minimal_spirv.ptrw(), vertex_spirv, sizeof(vertex_spirv));
-				
+
 			} else if (p_stage == SHADER_STAGE_FRAGMENT) {
 				// Minimal fragment shader that outputs a color
 				uint32_t fragment_spirv[] = {
@@ -275,57 +275,57 @@ Vector<uint8_t> RenderingDevice::shader_compile_spirv_from_source(ShaderStage p_
 					0x00000000, // Generator
 					0x0000000F, // Bound (15 IDs used)
 					0x00000000, // Schema
-					
+
 					// OpCapability Shader
 					0x00020011, 0x00000001,
-					
+
 					// OpMemoryModel Logical GLSL450
 					0x0003000E, 0x00000000, 0x00000001,
-					
+
 					// OpEntryPoint Fragment %main "main" %outColor
 					0x0004000F, 0x00000004, 0x00000004, 0x6E69616D,
 					0x00000000, 0x0000000E,
-					
+
 					// OpExecutionMode %main OriginUpperLeft
 					0x00030010, 0x00000004, 0x00000007,
-					
+
 					// OpDecorate %outColor Location 0
 					0x00040047, 0x0000000E, 0x0000001E, 0x00000000,
-					
+
 					// OpTypeVoid
 					0x00020013, 0x00000002,
-					
+
 					// OpTypeFunction %void
 					0x00030021, 0x00000003, 0x00000002,
-					
+
 					// OpTypeFloat 32
 					0x00030016, 0x00000006, 0x00000020,
-					
+
 					// OpTypeVector %float 4
 					0x00040017, 0x00000007, 0x00000006, 0x00000004,
-					
+
 					// OpTypePointer Output %v4float
 					0x00040020, 0x0000000D, 0x00000003, 0x00000007,
-					
+
 					// OpVariable %outColor Output
 					0x0004003B, 0x0000000D, 0x0000000E, 0x00000003,
-					
+
 					// OpFunction %void None %3
 					0x00050036, 0x00000002, 0x00000004, 0x00000000, 0x00000003,
-					
+
 					// OpLabel
 					0x000200F8, 0x00000005,
-					
+
 					// OpReturn
 					0x000100FD,
-					
+
 					// OpFunctionEnd
 					0x00010038
 				};
-				
+
 				minimal_spirv.resize(sizeof(fragment_spirv));
 				memcpy(minimal_spirv.ptrw(), fragment_spirv, sizeof(fragment_spirv));
-				
+
 			} else if (p_stage == SHADER_STAGE_COMPUTE) {
 				// Minimal compute shader
 				uint32_t compute_spirv[] = {
@@ -334,55 +334,55 @@ Vector<uint8_t> RenderingDevice::shader_compile_spirv_from_source(ShaderStage p_
 					0x00000000, // Generator
 					0x00000008, // Bound (8 IDs used)
 					0x00000000, // Schema
-					
+
 					// OpCapability Shader
 					0x00020011, 0x00000001,
-					
+
 					// OpMemoryModel Logical GLSL450
 					0x0003000E, 0x00000000, 0x00000001,
-					
+
 					// OpEntryPoint GLCompute %main "main"
 					0x0004000F, 0x00000005, 0x00000004, 0x6E69616D,
 					0x00000000,
-					
+
 					// OpExecutionMode %main LocalSize 1 1 1
 					0x00060010, 0x00000004, 0x00000011, 0x00000001,
 					0x00000001, 0x00000001,
-					
+
 					// OpTypeVoid
 					0x00020013, 0x00000002,
-					
+
 					// OpTypeFunction %void
 					0x00030021, 0x00000003, 0x00000002,
-					
+
 					// OpFunction %void None %3
 					0x00050036, 0x00000002, 0x00000004, 0x00000000, 0x00000003,
-					
+
 					// OpLabel
 					0x000200F8, 0x00000005,
-					
+
 					// OpReturn
 					0x000100FD,
-					
+
 					// OpFunctionEnd
 					0x00010038
 				};
-				
+
 				minimal_spirv.resize(sizeof(compute_spirv));
 				memcpy(minimal_spirv.ptrw(), compute_spirv, sizeof(compute_spirv));
-				
+
 			} else {
 				// Fallback to basic header for unknown stages
 				minimal_spirv.resize(20); // 5 words * 4 bytes
-				uint32_t *words = (uint32_t*)minimal_spirv.ptrw();
-				
+				uint32_t *words = (uint32_t *)minimal_spirv.ptrw();
+
 				words[0] = 0x07230203; // SPIR-V magic number
 				words[1] = 0x00010300; // SPIR-V version 1.3
 				words[2] = 0x00000000; // Generator magic number (0 = unknown)
 				words[3] = 0x00000001; // Bound (number of IDs used)
 				words[4] = 0x00000000; // Schema (always 0)
 			}
-			
+
 			print_verbose("🔧 WEBGPU SHADER: Generated valid SPIR-V (" + itos(minimal_spirv.size()) + " bytes) for stage " + itos(p_stage));
 			return minimal_spirv;
 #else
@@ -397,10 +397,10 @@ Vector<uint8_t> compile_glslang_shader(RenderingDeviceCommons::ShaderStage p_sta
 #ifdef WEBGPU_ENABLED
 	// For WebGPU, provide valid SPIR-V data so the shader pipeline can proceed
 	print_verbose("🔧 WEBGPU SHADER STUB: Generating valid SPIR-V for stage: " + itos(p_stage));
-	
+
 	// Create a valid minimal SPIR-V shader that will pass reflection
 	Vector<uint8_t> minimal_spirv;
-	
+
 	// Basic vertex shader SPIR-V (simplified but valid)
 	if (p_stage == RenderingDeviceCommons::SHADER_STAGE_VERTEX) {
 		// Minimal vertex shader that outputs a position
@@ -410,54 +410,54 @@ Vector<uint8_t> compile_glslang_shader(RenderingDeviceCommons::ShaderStage p_sta
 			0x00000000, // Generator
 			0x0000000D, // Bound (13 IDs used)
 			0x00000000, // Schema
-			
+
 			// OpCapability Shader
 			0x00020011, 0x00000001,
-			
+
 			// OpMemoryModel Logical GLSL450
 			0x0003000E, 0x00000000, 0x00000001,
-			
+
 			// OpEntryPoint Vertex %main "main" %gl_Position
 			0x0004000F, 0x00000000, 0x00000004, 0x6E69616D,
 			0x00000000, 0x0000000C,
-			
+
 			// OpDecorate %gl_Position BuiltIn Position
 			0x00040047, 0x0000000C, 0x0000000B, 0x00000000,
-			
+
 			// OpTypeVoid
 			0x00020013, 0x00000002,
-			
+
 			// OpTypeFunction %void
 			0x00030021, 0x00000003, 0x00000002,
-			
+
 			// OpTypeFloat 32
 			0x00030016, 0x00000006, 0x00000020,
-			
+
 			// OpTypeVector %float 4
 			0x00040017, 0x00000007, 0x00000006, 0x00000004,
-			
+
 			// OpTypePointer Output %v4float
 			0x00040020, 0x0000000B, 0x00000003, 0x00000007,
-			
+
 			// OpVariable %gl_Position Output
 			0x0004003B, 0x0000000B, 0x0000000C, 0x00000003,
-			
+
 			// OpFunction %void None %3
 			0x00050036, 0x00000002, 0x00000004, 0x00000000, 0x00000003,
-			
+
 			// OpLabel
 			0x000200F8, 0x00000005,
-			
+
 			// OpReturn
 			0x000100FD,
-			
+
 			// OpFunctionEnd
 			0x00010038
 		};
-		
+
 		minimal_spirv.resize(sizeof(vertex_spirv));
 		memcpy(minimal_spirv.ptrw(), vertex_spirv, sizeof(vertex_spirv));
-		
+
 	} else if (p_stage == RenderingDeviceCommons::SHADER_STAGE_FRAGMENT) {
 		// Minimal fragment shader that outputs a color
 		uint32_t fragment_spirv[] = {
@@ -466,57 +466,57 @@ Vector<uint8_t> compile_glslang_shader(RenderingDeviceCommons::ShaderStage p_sta
 			0x00000000, // Generator
 			0x0000000F, // Bound (15 IDs used)
 			0x00000000, // Schema
-			
+
 			// OpCapability Shader
 			0x00020011, 0x00000001,
-			
+
 			// OpMemoryModel Logical GLSL450
 			0x0003000E, 0x00000000, 0x00000001,
-			
+
 			// OpEntryPoint Fragment %main "main" %outColor
 			0x0004000F, 0x00000004, 0x00000004, 0x6E69616D,
 			0x00000000, 0x0000000E,
-			
+
 			// OpExecutionMode %main OriginUpperLeft
 			0x00030010, 0x00000004, 0x00000007,
-			
+
 			// OpDecorate %outColor Location 0
 			0x00040047, 0x0000000E, 0x0000001E, 0x00000000,
-			
+
 			// OpTypeVoid
 			0x00020013, 0x00000002,
-			
+
 			// OpTypeFunction %void
 			0x00030021, 0x00000003, 0x00000002,
-			
+
 			// OpTypeFloat 32
 			0x00030016, 0x00000006, 0x00000020,
-			
+
 			// OpTypeVector %float 4
 			0x00040017, 0x00000007, 0x00000006, 0x00000004,
-			
+
 			// OpTypePointer Output %v4float
 			0x00040020, 0x0000000D, 0x00000003, 0x00000007,
-			
+
 			// OpVariable %outColor Output
 			0x0004003B, 0x0000000D, 0x0000000E, 0x00000003,
-			
+
 			// OpFunction %void None %3
 			0x00050036, 0x00000002, 0x00000004, 0x00000000, 0x00000003,
-			
+
 			// OpLabel
 			0x000200F8, 0x00000005,
-			
+
 			// OpReturn
 			0x000100FD,
-			
+
 			// OpFunctionEnd
 			0x00010038
 		};
-		
+
 		minimal_spirv.resize(sizeof(fragment_spirv));
 		memcpy(minimal_spirv.ptrw(), fragment_spirv, sizeof(fragment_spirv));
-		
+
 	} else if (p_stage == RenderingDeviceCommons::SHADER_STAGE_COMPUTE) {
 		// Minimal compute shader
 		uint32_t compute_spirv[] = {
@@ -525,55 +525,55 @@ Vector<uint8_t> compile_glslang_shader(RenderingDeviceCommons::ShaderStage p_sta
 			0x00000000, // Generator
 			0x00000008, // Bound (8 IDs used)
 			0x00000000, // Schema
-			
+
 			// OpCapability Shader
 			0x00020011, 0x00000001,
-			
+
 			// OpMemoryModel Logical GLSL450
 			0x0003000E, 0x00000000, 0x00000001,
-			
+
 			// OpEntryPoint GLCompute %main "main"
 			0x0004000F, 0x00000005, 0x00000004, 0x6E69616D,
 			0x00000000,
-			
+
 			// OpExecutionMode %main LocalSize 1 1 1
 			0x00060010, 0x00000004, 0x00000011, 0x00000001,
 			0x00000001, 0x00000001,
-			
+
 			// OpTypeVoid
 			0x00020013, 0x00000002,
-			
+
 			// OpTypeFunction %void
 			0x00030021, 0x00000003, 0x00000002,
-			
+
 			// OpFunction %void None %3
 			0x00050036, 0x00000002, 0x00000004, 0x00000000, 0x00000003,
-			
+
 			// OpLabel
 			0x000200F8, 0x00000005,
-			
+
 			// OpReturn
 			0x000100FD,
-			
+
 			// OpFunctionEnd
 			0x00010038
 		};
-		
+
 		minimal_spirv.resize(sizeof(compute_spirv));
 		memcpy(minimal_spirv.ptrw(), compute_spirv, sizeof(compute_spirv));
-		
+
 	} else {
 		// Fallback to basic header for unknown stages
 		minimal_spirv.resize(20); // 5 words * 4 bytes
-		uint32_t *words = (uint32_t*)minimal_spirv.ptrw();
-		
+		uint32_t *words = (uint32_t *)minimal_spirv.ptrw();
+
 		words[0] = 0x07230203; // SPIR-V magic number
 		words[1] = 0x00010300; // SPIR-V version 1.3
 		words[2] = 0x00000000; // Generator magic number (0 = unknown)
 		words[3] = 0x00000001; // Bound (number of IDs used)
 		words[4] = 0x00000000; // Schema (always 0)
 	}
-	
+
 	print_verbose("🔧 WEBGPU SHADER STUB: Generated valid SPIR-V (" + itos(minimal_spirv.size()) + " bytes) for stage " + itos(p_stage));
 	return minimal_spirv;
 #else
@@ -4894,7 +4894,6 @@ void RenderingDevice::draw_list_set_blend_constants(DrawListID p_list, const Col
 }
 
 void RenderingDevice::draw_list_bind_render_pipeline(DrawListID p_list, RID p_render_pipeline) {
-	printf("🚨🚨🚨 VALIDATION #5: draw_list_bind_render_pipeline() CALLED - pipeline RID: %llu\n", p_render_pipeline.get_id());
 	print_error("🚨🚨🚨 VALIDATION #5: draw_list_bind_render_pipeline() CALLED - pipeline RID: " + itos(p_render_pipeline.get_id()));
 
 	ERR_RENDER_THREAD_GUARD();
@@ -4903,12 +4902,10 @@ void RenderingDevice::draw_list_bind_render_pipeline(DrawListID p_list, RID p_re
 
 	const RenderPipeline *pipeline = render_pipeline_owner.get_or_null(p_render_pipeline);
 	if (!pipeline) {
-		printf("🚨🚨🚨 VALIDATION #5: ERROR - Pipeline is NULL for RID: %llu\n", p_render_pipeline.get_id());
 		print_error("🚨🚨🚨 VALIDATION #5: ERROR - Pipeline is NULL for RID: " + itos(p_render_pipeline.get_id()));
 		ERR_FAIL_NULL(pipeline);
 	}
 
-	printf("🚨🚨🚨 VALIDATION #5: Pipeline found, driver_id: %llu\n", (uint64_t)pipeline->driver_id.id);
 	print_error("🚨🚨🚨 VALIDATION #5: Pipeline found, driver_id: " + itos((uint64_t)pipeline->driver_id.id));
 
 #ifdef DEBUG_ENABLED
@@ -5116,9 +5113,6 @@ void RenderingDevice::draw_list_set_push_constant(DrawListID p_list, const void 
 }
 
 void RenderingDevice::draw_list_draw(DrawListID p_list, bool p_use_indices, uint32_t p_instances, uint32_t p_procedural_vertices) {
-	printf("🚨🚨🚨 VALIDATION #5: draw_list_draw() CALLED - pipeline_active: %s\n", draw_list.validation.pipeline_active ? "true" : "false");
-	print_error("🚨🚨🚨 VALIDATION #5: draw_list_draw() CALLED - pipeline_active: " + String(draw_list.validation.pipeline_active ? "true" : "false"));
-
 	ERR_RENDER_THREAD_GUARD();
 
 	ERR_FAIL_COND(!draw_list.active);
