@@ -76,6 +76,13 @@ jobs:
 
       - name: Setup Python and SCons
         uses: ./.github/actions/godot-deps
+        with:
+          # windows-latest now uses Visual Studio 2026, supported since 4.10.1.
+          scons-version: 4.10.1
+
+      - name: Verify the MSVC toolchain before downloading MSVC libraries
+        if: matrix.compiler != 'gcc'
+        run: python -c "from SCons.Tool.MSCommon import msvc_exists; assert msvc_exists(), 'MSVC unavailable; refusing to mix MinGW with MSVC libraries'"
 
       - name: Download Direct3D 12 SDK components
         run: python ./misc/scripts/install_d3d12_sdk_windows.py
