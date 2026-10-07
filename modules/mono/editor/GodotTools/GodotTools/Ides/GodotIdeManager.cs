@@ -208,28 +208,28 @@ namespace GodotTools.Ides
             public void LogDebug(string message)
             {
                 if (OS.IsStdOutVerbose())
-                    Console.WriteLine(message);
+                    Console.WriteLine(LogMessage.Escape(message));
             }
 
             public void LogInfo(string message)
             {
                 if (OS.IsStdOutVerbose())
-                    Console.WriteLine(message);
+                    Console.WriteLine(LogMessage.Escape(message));
             }
 
             public void LogWarning(string message)
             {
-                GD.PushWarning(message);
+                GD.PushWarning(LogMessage.Escape(message));
             }
 
             public void LogError(string message)
             {
-                GD.PushError(message);
+                GD.PushError(LogMessage.Escape(message));
             }
 
             public void LogError(string message, Exception e)
             {
-                GD.PushError(message + "\n" + e);
+                GD.PushError(LogMessage.Escape(message + "\n" + e));
             }
         }
     }

@@ -1,0 +1,13 @@
+diff --git a/thirdparty/harfbuzz/src/hb-ot-cmap-table.hh b/thirdparty/harfbuzz/src/hb-ot-cmap-table.hh
+index 564ef41a..8cfccdb4 100644
+--- a/thirdparty/harfbuzz/src/hb-ot-cmap-table.hh
++++ b/thirdparty/harfbuzz/src/hb-ot-cmap-table.hh
+@@ -1646,7 +1646,7 @@ struct EncodingRecord
+       CmapSubtable *cmapsubtable = c->push<CmapSubtable> ();
+       unsigned origin_length = c->length ();
+       cmapsubtable->serialize (c, it, format, plan, &(base+subtable));
+-      if (c->length () - origin_length > 0) *objidx = c->pop_pack ();
++      if (c->length () > origin_length) *objidx = c->pop_pack ();
+       else c->pop_discard ();
+     }
+ 

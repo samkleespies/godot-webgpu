@@ -41,7 +41,9 @@ RenderSceneBuffersRD::~RenderSceneBuffersRD() {
 
 	data_buffers.clear();
 
-	RendererRD::MaterialStorage::get_singleton()->samplers_rd_free(samplers);
+	if (RendererRD::MaterialStorage::get_singleton()) {
+		RendererRD::MaterialStorage::get_singleton()->samplers_rd_free(samplers);
+	}
 }
 
 void RenderSceneBuffersRD::_bind_methods() {
@@ -311,6 +313,7 @@ RID RenderSceneBuffersRD::_create_texture_from_format(const StringName &p_contex
 }
 
 RID RenderSceneBuffersRD::create_texture_from_format(const StringName &p_context, const StringName &p_texture_name, const RD::TextureFormat &p_texture_format, RD::TextureView p_view, bool p_unique) {
+	ERR_FAIL_NULL_V(RD::get_singleton(), RID());
 	// TODO p_unique, if p_unique is true, this is a texture that can be shared. This will be implemented later as an optimization.
 
 	NTKey key(p_context, p_texture_name);
@@ -320,11 +323,14 @@ RID RenderSceneBuffersRD::create_texture_from_format(const StringName &p_context
 		return named_textures[key].texture;
 	}
 
-	// Add a new entry..
+	RID texture = RD::get_singleton()->texture_create(p_texture_format, p_view);
+	ERR_FAIL_COND_V(texture.is_null(), RID());
+
+	// Only cache successfully created textures.
 	NamedTexture &named_texture = named_textures[key];
 	named_texture.format = p_texture_format;
 	named_texture.is_unique = p_unique;
-	named_texture.texture = RD::get_singleton()->texture_create(p_texture_format, p_view);
+	named_texture.texture = texture;
 
 	Array arr = { p_context, p_texture_name };
 	RD::get_singleton()->set_resource_name(named_texture.texture, String("RenderBuffer {0}/{1}").format(arr));

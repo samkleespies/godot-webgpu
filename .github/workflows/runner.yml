@@ -1,5 +1,12 @@
+permissions:
+  contents: read
+
 name: 🔗 GHA
-on: [push, pull_request, merge_group]
+on:
+  push:
+    branches: [webgpu-prototype]
+  pull_request:
+  merge_group:
 
 concurrency:
   group: ${{ github.workflow }}|${{ github.ref_name }}

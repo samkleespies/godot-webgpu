@@ -30,12 +30,17 @@
 
 #pragma once
 
+#include "core/io/file_access_memory.h"
 #include "core/io/image.h"
 #include "core/os/os.h"
 
 #include "tests/test_utils.h"
 
 #include "modules/modules_enabled.gen.h"
+
+#ifdef MODULE_HDR_ENABLED
+#include "modules/hdr/image_loader_hdr.h"
+#endif
 
 #include "thirdparty/doctest/doctest.h"
 
@@ -77,6 +82,123 @@ TEST_CASE("[Image] Instantiation") {
 			image->get_data() == image_from_data->get_data(),
 			"An image created from data of another image should have the same data of the original image.");
 }
+
+TEST_CASE("[Image] Reject overflowing dimensions") {
+	Ref<Image> image = memnew(Image(2, 2, false, Image::FORMAT_RGBA8));
+	image->fill(Color(1, 0, 0));
+	Vector<uint8_t> original = image->get_data();
+	ERR_PRINT_OFF;
+	image->resize(65536, 65536);
+	image->initialize_data(65536, 65536, false, Image::FORMAT_RGBA8);
+	image->initialize_data(65536, 65536, false, Image::FORMAT_RGBA8, Vector<uint8_t>());
+	ERR_PRINT_ON;
+	CHECK(image->get_width() == 2);
+	CHECK(image->get_height() == 2);
+	CHECK(image->get_data() == original);
+}
+
+TEST_CASE("[Image] XPM validates pixel keys and row lengths") {
+	const char *valid[] = { "2 1 2 5", "aaaaa c #ff0000", "bbbbb c #00ff00", "aaaaabbbbb", nullptr };
+	Ref<Image> image = memnew(Image());
+	image->initialize_data(valid);
+	REQUIRE(image->get_width() == 2);
+	CHECK(image->get_pixel(0, 0) == Color(1, 0, 0));
+	CHECK(image->get_pixel(1, 0) == Color(0, 1, 0));
+	const char *short_row[] = { "2 1 1 5", "aaaaa c #ff0000", "aaaaa", nullptr };
+	const char *empty_key[] = { "1 1 1 0", nullptr };
+	const char *large_key[] = { "1 1 1 6", nullptr };
+	const char *empty_size[] = { "0 1 1 1", nullptr };
+	const char *too_many_pixels[] = { "32767 32767 1 1", nullptr };
+	ERR_PRINT_OFF;
+	image->initialize_data(short_row);
+	for (const char **invalid : { empty_key, large_key, empty_size, too_many_pixels }) {
+		Ref<Image> rejected = memnew(Image());
+		rejected->initialize_data(invalid);
+		CHECK(rejected->is_empty());
+	}
+	ERR_PRINT_ON;
+}
+
+#ifdef MODULE_HDR_ENABLED
+TEST_CASE("[Image] HDR bounds and truncated packets") {
+	auto load = [](const String &p_dimensions, const Vector<uint8_t> &p_pixels, Ref<Image> p_image) {
+		Vector<uint8_t> source = ("#?RADIANCE\nFORMAT=32-bit_rle_rgbe\n\n" + p_dimensions + "\n").to_utf8_buffer();
+		source.append_array(p_pixels);
+		Ref<FileAccessMemory> file = memnew(FileAccessMemory());
+		file->open_custom(source.ptr(), source.size());
+		ImageLoaderHDR loader;
+		return loader.load_image(p_image, file, 0, 1.0);
+	};
+	Ref<Image> image = memnew(Image());
+	Vector<uint8_t> rle = { 2, 2, 0, 8, 136, 128, 136, 64, 136, 32, 136, 128 };
+	REQUIRE(load("-Y 1 +X 8", rle, image) == OK);
+	CHECK(image->get_width() == 8);
+	CHECK(image->get_height() == 1);
+	CHECK(image->get_pixel(0, 0) == image->get_pixel(7, 0));
+	Vector<uint8_t> flat = { 128, 64, 32, 128 };
+	REQUIRE(load("-Y 1 +X 1", flat, image) == OK);
+	CHECK(image->get_width() == 1);
+	// A complete literal packet and the non-RLE scanline fallback remain valid.
+	Vector<uint8_t> literal = { 2, 2, 0, 8 };
+	Vector<uint8_t> raw;
+	for (int channel = 0; channel < 4; channel++) {
+		literal.push_back(8);
+		for (int pixel = 0; pixel < 8; pixel++) {
+			literal.push_back(flat[channel]);
+		}
+	}
+	for (int pixel = 0; pixel < 8; pixel++) {
+		raw.append_array(flat);
+	}
+	REQUIRE(load("-Y 1 +X 8", literal, image) == OK);
+	REQUIRE(load("-Y 1 +X 8", raw, image) == OK);
+	ERR_PRINT_OFF;
+	for (const char *dimensions : { "-Y 0 +X 8", "-Y -1 +X 8", "-Y 1 +X 0", "-Y 65536 +X 65536", "-Y 1 +X 4294967297" }) {
+		CHECK(load(dimensions, rle, image) == ERR_FILE_CORRUPT);
+	}
+	CHECK(load("-Y 1 +X 1", Vector<uint8_t>({ 128, 64, 32 }), image) == ERR_FILE_CORRUPT);
+	for (const Vector<uint8_t> &complete : { rle, literal, raw }) {
+		for (int length = 0; length < complete.size(); length++) {
+			Vector<uint8_t> truncated = complete;
+			truncated.resize(length);
+			CHECK(load("-Y 1 +X 8", truncated, image) == ERR_FILE_CORRUPT);
+		}
+	}
+	for (const Vector<uint8_t> &invalid : { Vector<uint8_t>({ 2, 2, 0, 8, 0 }), Vector<uint8_t>({ 2, 2, 0, 8, 137, 1 }), Vector<uint8_t>({ 2, 2, 0, 8, 9 }), Vector<uint8_t>({ 2, 2, 0, 7 }) }) {
+		CHECK(load("-Y 1 +X 8", invalid, image) == ERR_FILE_CORRUPT);
+	}
+	ERR_PRINT_ON;
+}
+#endif
+
+#ifdef MODULE_JPG_ENABLED
+TEST_CASE("[Image] JPEG rejects dimensions exceeding the pixel limit") {
+	Ref<Image> source = memnew(Image(2, 2, false, Image::FORMAT_RGB8));
+	source->fill(Color(1, 0, 0));
+	Vector<uint8_t> jpeg = source->save_jpg_to_buffer();
+	Ref<Image> image = memnew(Image());
+	REQUIRE(image->load_jpg_from_buffer(jpeg) == OK);
+	// Locate the baseline Start Of Frame segment and replace only its dimensions.
+	int frame = -1;
+	for (int offset = 2; offset + 8 < jpeg.size();) {
+		REQUIRE(jpeg[offset] == 0xff);
+		if (jpeg[offset + 1] == 0xc0) {
+			frame = offset;
+			break;
+		}
+		int length = (int(jpeg[offset + 2]) << 8) | jpeg[offset + 3];
+		REQUIRE(length >= 2);
+		offset += 2 + length;
+	}
+	REQUIRE(frame >= 0);
+	for (int offset = 5; offset <= 8; offset++) {
+		jpeg.write[frame + offset] = 0xff;
+	}
+	ERR_PRINT_OFF;
+	CHECK(image->load_jpg_from_buffer(jpeg) != OK);
+	ERR_PRINT_ON;
+}
+#endif
 
 TEST_CASE("[Image] Saving and loading") {
 	Ref<Image> image = memnew(Image(4, 4, false, Image::FORMAT_RGBA8));

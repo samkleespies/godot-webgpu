@@ -1,3 +1,6 @@
+permissions:
+  contents: read
+
 name: 🏁 Windows Builds
 on:
   workflow_call:
@@ -61,7 +64,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          # Only the top-level Dawn port and emsdk sources are used.
+          # Dawn's nested conformance tests include private Google repositories.
+          submodules: true
 
       - name: Restore Godot build cache
         uses: ./.github/actions/godot-cache-restore
@@ -71,6 +76,13 @@ jobs:
 
       - name: Setup Python and SCons
         uses: ./.github/actions/godot-deps
+        with:
+          # windows-latest now uses Visual Studio 2026, supported since 4.10.1.
+          scons-version: 4.10.1
+
+      - name: Verify the MSVC toolchain before downloading MSVC libraries
+        if: matrix.compiler != 'gcc'
+        run: python -c "from SCons.Tool.MSCommon import msvc_exists; assert msvc_exists(), 'MSVC unavailable; refusing to mix MinGW with MSVC libraries'"
 
       - name: Download Direct3D 12 SDK components
         run: python ./misc/scripts/install_d3d12_sdk_windows.py
@@ -98,6 +110,7 @@ jobs:
         run: unzip -o accesskit-c-0.16.0/accesskit_c.zip
 
       - name: Compilation
+        id: compilation
         uses: ./.github/actions/godot-build
         with:
           scons-flags: ${{ env.SCONS_FLAGS }} ${{ matrix.scons-flags }}
@@ -105,6 +118,8 @@ jobs:
           target: ${{ matrix.target }}
 
       - name: Save Godot build cache
+        # Preserve completed objects when a later source file fails to compile.
+        if: ${{ !cancelled() && (steps.compilation.outcome == 'success' || steps.compilation.outcome == 'failure') }}
         uses: ./.github/actions/godot-cache-save
         with:
           cache-name: ${{ matrix.cache-name }}
@@ -122,7 +137,12 @@ jobs:
           name: ${{ matrix.cache-name }}
 
       - name: Unit tests
+        timeout-minutes: 10
+        env:
+          GODOT_TEST_PROGRESS: "1"
         run: |
           ${{ matrix.bin }} --version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           ${{ matrix.bin }} --help
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           ${{ matrix.bin }} --test --force-colors

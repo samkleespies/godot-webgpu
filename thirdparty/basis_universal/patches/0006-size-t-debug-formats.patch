@@ -1,0 +1,149 @@
+diff --git a/thirdparty/basis_universal/encoder/basisu_backend.cpp b/thirdparty/basis_universal/encoder/basisu_backend.cpp
+index 3fa3d889..afaac239 100644
+--- a/thirdparty/basis_universal/encoder/basisu_backend.cpp
++++ b/thirdparty/basis_universal/encoder/basisu_backend.cpp
+@@ -55,7 +55,7 @@ namespace basisu
+ 		m_params = params;
+ 		m_slices = slice_descs;
+ 		
+-		debug_printf("basisu_backend::Init: Slices: %u, ETC1S: %u, EndpointRDOQualityThresh: %f, SelectorRDOQualityThresh: %f\n",
++		debug_printf("basisu_backend::Init: Slices: %zu, ETC1S: %u, EndpointRDOQualityThresh: %f, SelectorRDOQualityThresh: %f\n",
+ 			m_slices.size(),
+ 			params.m_etc1s,
+ 			params.m_endpoint_rdo_quality_thresh,
+@@ -1467,7 +1467,7 @@ namespace basisu
+ 
+ 			total_image_bytes += (uint32_t)coder.get_bytes().size();
+ 
+-			debug_printf("Slice %u compressed size: %u bytes, %3.3f bits per slice texel\n", slice_index, m_output.m_slice_image_data[slice_index].size(), m_output.m_slice_image_data[slice_index].size() * 8.0f / (m_slices[slice_index].m_orig_width * m_slices[slice_index].m_orig_height));
++			debug_printf("Slice %u compressed size: %zu bytes, %3.3f bits per slice texel\n", slice_index, m_output.m_slice_image_data[slice_index].size(), m_output.m_slice_image_data[slice_index].size() * 8.0f / (m_slices[slice_index].m_orig_width * m_slices[slice_index].m_orig_height));
+ 
+ 		} // slice_index
+ 
+@@ -1478,7 +1478,7 @@ namespace basisu
+ 		debug_printf("Total delta endpoint bits: %u bytes: %u bits/texel: %3.3f bits/block: %3.3f\n", total_delta_endpoint_bits, total_delta_endpoint_bits / 8, total_delta_endpoint_bits / total_texels, total_delta_endpoint_bits / total_blocks);
+ 		debug_printf("Total selector bits: %u bytes: %u bits/texel: %3.3f bits/block: %3.3f\n", total_selector_bits, total_selector_bits / 8, total_selector_bits / total_texels, total_selector_bits / total_blocks);
+ 
+-		debug_printf("Total table bytes: %u, %3.3f bits/texel\n", m_output.m_slice_image_tables.size(), m_output.m_slice_image_tables.size() * 8.0f / total_texels);
++		debug_printf("Total table bytes: %zu, %3.3f bits/texel\n", m_output.m_slice_image_tables.size(), m_output.m_slice_image_tables.size() * 8.0f / total_texels);
+ 		debug_printf("Total image bytes: %u, %3.3f bits/texel\n", total_image_bytes, total_image_bytes * 8.0f / total_texels);
+ 
+ 		return true;
+@@ -1534,7 +1534,7 @@ namespace basisu
+ 		for (uint32_t i = 0; i < new_endpoint_was_used.size(); i++)
+ 			if (!new_endpoint_was_used[i])
+ 				total_unused_new_entries++;
+-		debug_printf("basisu_backend::encode_endpoint_palette: total_unused_new_entries: %u out of %u\n", total_unused_new_entries, new_endpoint_was_used.size());
++		debug_printf("basisu_backend::encode_endpoint_palette: total_unused_new_entries: %u out of %zu\n", total_unused_new_entries, new_endpoint_was_used.size());
+ 
+ 		bool is_grayscale = true;
+ 		for (uint32_t old_endpoint_index = 0; old_endpoint_index < (uint32_t)m_endpoint_palette.size(); old_endpoint_index++)
+diff --git a/thirdparty/basis_universal/encoder/basisu_comp.cpp b/thirdparty/basis_universal/encoder/basisu_comp.cpp
+index e9aa20f3..8fc79163 100644
+--- a/thirdparty/basis_universal/encoder/basisu_comp.cpp
++++ b/thirdparty/basis_universal/encoder/basisu_comp.cpp
+@@ -237,7 +237,7 @@ namespace basisu
+ 			{
+ 				debug_printf("m_source_mipmap_images array sizes:\n");
+ 				for (uint32_t i = 0; i < m_params.m_source_mipmap_images.size(); i++)
+-					debug_printf("%u ", m_params.m_source_mipmap_images[i].size());
++					debug_printf("%zu ", m_params.m_source_mipmap_images[i].size());
+ 				debug_printf("\n");
+ 			}
+ 
+@@ -245,7 +245,7 @@ namespace basisu
+ 			{
+ 				debug_printf("m_source_mipmap_images_hdr array sizes:\n");
+ 				for (uint32_t i = 0; i < m_params.m_source_mipmap_images_hdr.size(); i++)
+-					debug_printf("%u ", m_params.m_source_mipmap_images_hdr[i].size());
++					debug_printf("%zu ", m_params.m_source_mipmap_images_hdr[i].size());
+ 				debug_printf("\n");
+ 			}
+ 
+@@ -337,7 +337,7 @@ namespace basisu
+ 			debug_printf("Has global codebooks: %u\n", m_params.m_pGlobal_codebooks ? 1 : 0);
+ 			if (m_params.m_pGlobal_codebooks)
+ 			{
+-				debug_printf("Global codebook endpoints: %u selectors: %u\n", m_params.m_pGlobal_codebooks->get_endpoints().size(), m_params.m_pGlobal_codebooks->get_selectors().size());
++				debug_printf("Global codebook endpoints: %zu selectors: %zu\n", m_params.m_pGlobal_codebooks->get_endpoints().size(), m_params.m_pGlobal_codebooks->get_selectors().size());
+ 			}
+ 
+ 			PRINT_BOOL_VALUE(m_create_ktx2_file);
+@@ -345,11 +345,11 @@ namespace basisu
+ 			debug_printf("KTX2 UASTC supercompression: %u\n", m_params.m_ktx2_uastc_supercompression);
+ 			debug_printf("KTX2 Zstd supercompression level: %i\n", (int)m_params.m_ktx2_zstd_supercompression_level);
+ 			debug_printf("KTX2 sRGB transfer func: %u\n", (int)m_params.m_ktx2_srgb_transfer_func);
+-			debug_printf("Total KTX2 key values: %u\n", m_params.m_ktx2_key_values.size());
++			debug_printf("Total KTX2 key values: %zu\n", m_params.m_ktx2_key_values.size());
+ 			for (uint32_t i = 0; i < m_params.m_ktx2_key_values.size(); i++)
+ 			{
+ 				debug_printf("Key: \"%s\"\n", m_params.m_ktx2_key_values[i].m_key.data());
+-				debug_printf("Value size: %u\n", m_params.m_ktx2_key_values[i].m_value.size());
++				debug_printf("Value size: %zu\n", m_params.m_ktx2_key_values[i].m_value.size());
+ 			}
+ 
+ 			PRINT_BOOL_VALUE(m_validate_output_data);
+@@ -1903,7 +1903,7 @@ namespace basisu
+ 				m_stats[dest_image_index].m_width = orig_width;
+ 				m_stats[dest_image_index].m_height = orig_height;
+ 
+-				debug_printf("****** Slice %u: mip %u, alpha_slice: %u, filename: \"%s\", original: %ux%u actual: %ux%u\n", 
++				debug_printf("****** Slice %zu: mip %u, alpha_slice: %u, filename: \"%s\", original: %ux%u actual: %ux%u\n",
+ 					m_slice_descs.size() - 1, mip_indices[slice_index], is_alpha_slice, source_filename.c_str(), 
+ 					orig_width, orig_height, 
+ 					m_params.m_hdr ? pSlice_image_hdr->get_width() : pSlice_image->get_width(), 
+@@ -2495,7 +2495,7 @@ namespace basisu
+ 		m_basis_file_size = (uint32_t)comp_data.size();
+ 		m_basis_bits_per_texel = total_orig_pixels ? (comp_data.size() * 8.0f) / total_orig_pixels : 0;
+ 
+-		debug_printf("Total .basis output file size: %u, %3.3f bits/texel\n", comp_data.size(), comp_data.size() * 8.0f / total_orig_pixels);
++		debug_printf("Total .basis output file size: %zu, %3.3f bits/texel\n", comp_data.size(), comp_data.size() * 8.0f / total_orig_pixels);
+ 
+ 		// HDR 6x6 TODO
+ 		// HACK HACK
+@@ -3894,7 +3894,7 @@ namespace basisu
+ 			total_orig_pixels += slice_desc.m_orig_width * slice_desc.m_orig_height;
+ 		}
+ 
+-		debug_printf("Total .ktx2 output file size: %u, %3.3f bits/texel\n", m_output_ktx2_file.size(), ((float)m_output_ktx2_file.size() * 8.0f) / total_orig_pixels);
++		debug_printf("Total .ktx2 output file size: %zu, %3.3f bits/texel\n", m_output_ktx2_file.size(), ((float)m_output_ktx2_file.size() * 8.0f) / total_orig_pixels);
+ 
+ 		return true;
+ 	}
+diff --git a/thirdparty/basis_universal/encoder/basisu_enc.h b/thirdparty/basis_universal/encoder/basisu_enc.h
+index 5373b60c..7b48c9b7 100644
+--- a/thirdparty/basis_universal/encoder/basisu_enc.h
++++ b/thirdparty/basis_universal/encoder/basisu_enc.h
+@@ -2220,8 +2220,8 @@ namespace basisu
+ 			}
+ 		}
+ 
+-		//debug_printf("generate_hierarchical_codebook_threaded: %u training vectors, %u unique training vectors, %3.3f secs\n", q.get_total_training_vecs(), (uint32_t)unique_vecs.size(), tm.get_elapsed_secs());
+-		debug_printf("generate_hierarchical_codebook_threaded: %u training vectors, %u unique training vectors\n", q.get_total_training_vecs(), (uint32_t)unique_vecs.size());
++		//debug_printf("generate_hierarchical_codebook_threaded: %zu training vectors, %u unique training vectors, %3.3f secs\n", q.get_total_training_vecs(), (uint32_t)unique_vecs.size(), tm.get_elapsed_secs());
++		debug_printf("generate_hierarchical_codebook_threaded: %zu training vectors, %u unique training vectors\n", q.get_total_training_vecs(), (uint32_t)unique_vecs.size());
+ 
+ 		Quantizer group_quant;
+ 		typedef typename group_hash::const_iterator group_hash_const_iter;
+diff --git a/thirdparty/basis_universal/encoder/basisu_frontend.cpp b/thirdparty/basis_universal/encoder/basisu_frontend.cpp
+index 99ac2aa9..4a3196b4 100644
+--- a/thirdparty/basis_universal/encoder/basisu_frontend.cpp
++++ b/thirdparty/basis_universal/encoder/basisu_frontend.cpp
+@@ -50,7 +50,7 @@ namespace basisu
+ 			
+ 	bool basisu_frontend::init(const params &p)
+ 	{
+-		debug_printf("basisu_frontend::init: Multithreaded: %u, Job pool total threads: %u, NumEndpointClusters: %u, NumSelectorClusters: %u, Perceptual: %u, CompressionLevel: %u\n",
++		debug_printf("basisu_frontend::init: Multithreaded: %u, Job pool total threads: %zu, NumEndpointClusters: %u, NumSelectorClusters: %u, Perceptual: %u, CompressionLevel: %u\n",
+ 			p.m_multithreaded, p.m_pJob_pool ? p.m_pJob_pool->get_total_threads() : 0,
+ 			p.m_max_endpoint_clusters, p.m_max_selector_clusters, p.m_perceptual, p.m_compression_level);
+ 				
+@@ -3198,7 +3198,7 @@ namespace basisu
+ 				m_encoded_blocks[block_index].set_inten_tables_etc1s(get_endpoint_cluster_inten_table(endpoint_cluster_index, false));
+ 			}
+ 
+-			debug_printf("Final (post-RDO) endpoint clusters: %u\n", m_endpoint_clusters.size());
++			debug_printf("Final (post-RDO) endpoint clusters: %zu\n", m_endpoint_clusters.size());
+ 		}
+ 						
+ 		//debug_printf("validate_output: %u\n", validate_output());

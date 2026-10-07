@@ -1,3 +1,6 @@
+permissions:
+  contents: read
+
 name: 🤖 Android Builds
 on:
   workflow_call:
@@ -40,7 +43,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          # Only the top-level Dawn port and emsdk sources are used.
+          # Dawn's nested conformance tests include private Google repositories.
+          submodules: true
 
       - name: Set up Java 17
         uses: actions/setup-java@v4

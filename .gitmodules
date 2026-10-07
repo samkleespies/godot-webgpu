@@ -1,3 +1,6 @@
 [submodule "thirdparty/dawn"]
 	path = thirdparty/dawn
 	url = https://dawn.googlesource.com/dawn
+[submodule "emsdk"]
+	path = emsdk
+	url = https://github.com/emscripten-core/emsdk.git

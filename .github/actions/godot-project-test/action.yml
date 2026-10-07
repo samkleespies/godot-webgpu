@@ -9,31 +9,43 @@ inputs:
 runs:
   using: composite
   steps:
-    # Download and extract zip archive with project, folder is renamed to be able to easy change used project
+    # Keep the upstream fixture separate from the fork's existing test_project demo.
     - name: Download test project
-      shell: sh
+      id: fixture
+      shell: bash
       run: |
-        wget https://github.com/godotengine/regression-test-project/archive/4.0.zip
-        unzip 4.0.zip
-        mv "regression-test-project-4.0" "test_project"
+        fixture_dir=$(mktemp -d "$RUNNER_TEMP/godot-regression.XXXXXX")
+        wget -q https://github.com/godotengine/regression-test-project/archive/4.0.zip -O "$fixture_dir/project.zip"
+        unzip -q "$fixture_dir/project.zip" -d "$fixture_dir"
+        echo "path=$fixture_dir/regression-test-project-4.0" >> "$GITHUB_OUTPUT"
 
     # Editor is quite complicated piece of software, so it is easy to introduce bug here.
 
     - name: Open and close editor (Vulkan)
-      shell: sh
+      shell: bash
       run: |
-        xvfb-run ${{ inputs.bin }} --audio-driver Dummy --editor --quit --path test_project 2>&1 | tee sanitizers_log.txt || true
+        set -o pipefail
+        status=0
+        timeout --kill-after=10s 5m xvfb-run ${{ inputs.bin }} --audio-driver Dummy --editor --quit --path "${{ steps.fixture.outputs.path }}" 2>&1 | tee sanitizers_log.txt || status=$?
+        test "$status" -ne 124 && test "$status" -ne 137
         misc/scripts/check_ci_log.py sanitizers_log.txt
 
     - name: Open and close editor (GLES3)
-      shell: sh
+      shell: bash
       run: |
-        DRI_PRIME=0 xvfb-run ${{ inputs.bin }} --audio-driver Dummy --rendering-driver opengl3 --editor --quit --path test_project 2>&1 | tee sanitizers_log.txt || true
+        set -o pipefail
+        status=0
+        DRI_PRIME=0 timeout --kill-after=10s 5m xvfb-run ${{ inputs.bin }} --audio-driver Dummy --rendering-driver opengl3 --editor --quit --path "${{ steps.fixture.outputs.path }}" 2>&1 | tee sanitizers_log.txt || status=$?
+        test "$status" -ne 124 && test "$status" -ne 137
         misc/scripts/check_ci_log.py sanitizers_log.txt
 
     # Run test project
     - name: Run project
-      shell: sh
+      shell: bash
       run: |
-        xvfb-run ${{ inputs.bin }} 40 --audio-driver Dummy --path test_project 2>&1 | tee sanitizers_log.txt || true
+        set -o pipefail
+        status=0
+        timeout --kill-after=10s 5m xvfb-run ${{ inputs.bin }} 40 --audio-driver Dummy --path "${{ steps.fixture.outputs.path }}" 2>&1 | tee sanitizers_log.txt || status=$?
+        test "$status" -ne 124 && test "$status" -ne 137
         misc/scripts/check_ci_log.py sanitizers_log.txt
+        grep -Fq "######################## Ending test ########################" sanitizers_log.txt

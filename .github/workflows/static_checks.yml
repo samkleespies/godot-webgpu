@@ -1,3 +1,6 @@
+permissions:
+  contents: read
+
 name: 📊 Static Checks
 on:
   workflow_call:

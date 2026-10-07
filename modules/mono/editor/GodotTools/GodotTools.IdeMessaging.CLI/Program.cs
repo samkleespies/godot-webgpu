@@ -170,7 +170,7 @@ namespace GodotTools.IdeMessaging.CLI
 
             private static void Log(StreamWriter writer, string message)
             {
-                writer.WriteLine($"{DateTime.Now:HH:mm:ss.ffffff}: {message}");
+                writer.WriteLine($"{DateTime.Now:HH:mm:ss.ffffff}: {LogMessage.Escape(message)}");
             }
 
             public void LogDebug(string message)

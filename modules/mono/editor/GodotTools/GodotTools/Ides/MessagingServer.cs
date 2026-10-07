@@ -284,7 +284,7 @@ namespace GodotTools.Ides
             {
                 if (!requestHandlers.TryGetValue(id, out var handler))
                 {
-                    logger.LogError($"Received unknown request: {id}");
+                    logger.LogError($"Received unknown request: {LogMessage.Escape(id)}");
                     return new MessageContent(MessageStatus.RequestNotSupported, "null");
                 }
 
@@ -295,7 +295,7 @@ namespace GodotTools.Ides
                 }
                 catch (JsonException)
                 {
-                    logger.LogError($"Received request with invalid body: {id}");
+                    logger.LogError($"Received request with invalid body: {LogMessage.Escape(id)}");
                     return new MessageContent(MessageStatus.InvalidRequestBody, "null");
                 }
             }

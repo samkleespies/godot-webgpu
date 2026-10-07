@@ -324,7 +324,7 @@ void Image::_get_mipmap_offset_and_size(int p_mipmap, int64_t &r_offset, int &r_
 		int bw = w % block != 0 ? w + (block - w % block) : w;
 		int bh = h % block != 0 ? h + (block - h % block) : h;
 
-		int64_t s = bw * bh;
+		int64_t s = int64_t(bw) * bh;
 
 		s *= pixel_size;
 		s >>= pixel_rshift;
@@ -1140,7 +1140,7 @@ void Image::resize(int p_width, int p_height, Interpolation p_interpolation) {
 	ERR_FAIL_COND_MSG(p_height <= 0, "Image height must be greater than 0.");
 	ERR_FAIL_COND_MSG(p_width > MAX_WIDTH, vformat("Image width cannot be greater than %d pixels.", MAX_WIDTH));
 	ERR_FAIL_COND_MSG(p_height > MAX_HEIGHT, vformat("Image height cannot be greater than %d pixels.", MAX_HEIGHT));
-	ERR_FAIL_COND_MSG(p_width * p_height > MAX_PIXELS, vformat("Too many pixels for image, maximum is %d pixels.", MAX_PIXELS));
+	ERR_FAIL_COND_MSG(int64_t(p_width) * p_height > MAX_PIXELS, vformat("Too many pixels for image, maximum is %d pixels.", MAX_PIXELS));
 
 	if (p_width == width && p_height == height) {
 		return;
@@ -1724,7 +1724,7 @@ int64_t Image::_get_dst_image_size(int p_width, int p_height, Format p_format, i
 		int bw = w % block != 0 ? w + (block - w % block) : w;
 		int bh = h % block != 0 ? h + (block - h % block) : h;
 
-		int64_t s = bw * bh;
+		int64_t s = int64_t(bw) * bh;
 
 		s *= pixsize;
 		s >>= pixshift;
@@ -2181,7 +2181,7 @@ void Image::initialize_data(int p_width, int p_height, bool p_use_mipmaps, Forma
 			vformat("The Image width specified (%d pixels) cannot be greater than %d pixels.", p_width, MAX_WIDTH));
 	ERR_FAIL_COND_MSG(p_height > MAX_HEIGHT,
 			vformat("The Image height specified (%d pixels) cannot be greater than %d pixels.", p_height, MAX_HEIGHT));
-	ERR_FAIL_COND_MSG(p_width * p_height > MAX_PIXELS,
+	ERR_FAIL_COND_MSG(int64_t(p_width) * p_height > MAX_PIXELS,
 			vformat("Too many pixels for Image. Maximum is %dx%d = %d pixels.", MAX_WIDTH, MAX_HEIGHT, MAX_PIXELS));
 	ERR_FAIL_INDEX_MSG(p_format, FORMAT_MAX, vformat("The Image format specified (%d) is out of range. See Image's Format enum.", p_format));
 
@@ -2207,7 +2207,7 @@ void Image::initialize_data(int p_width, int p_height, bool p_use_mipmaps, Forma
 			vformat("The Image width specified (%d pixels) cannot be greater than %d pixels.", p_width, MAX_WIDTH));
 	ERR_FAIL_COND_MSG(p_height > MAX_HEIGHT,
 			vformat("The Image height specified (%d pixels) cannot be greater than %d pixels.", p_height, MAX_HEIGHT));
-	ERR_FAIL_COND_MSG(p_width * p_height > MAX_PIXELS,
+	ERR_FAIL_COND_MSG(int64_t(p_width) * p_height > MAX_PIXELS,
 			vformat("Too many pixels for Image. Maximum is %dx%d = %d pixels.", MAX_WIDTH, MAX_HEIGHT, MAX_PIXELS));
 	ERR_FAIL_INDEX_MSG(p_format, FORMAT_MAX, vformat("The Image format specified (%d) is out of range. See Image's Format enum.", p_format));
 
@@ -2239,6 +2239,7 @@ void Image::initialize_data(int p_width, int p_height, bool p_use_mipmaps, Forma
 }
 
 void Image::initialize_data(const char **p_xpm) {
+	ERR_FAIL_NULL(p_xpm);
 	int size_width = 0;
 	int size_height = 0;
 	int pixelchars = 0;
@@ -2262,6 +2263,7 @@ void Image::initialize_data(const char **p_xpm) {
 
 	while (status != DONE) {
 		const char *line_ptr = p_xpm[line];
+		ERR_FAIL_NULL(line_ptr);
 
 		switch (status) {
 			case READING_HEADER: {
@@ -2272,13 +2274,15 @@ void Image::initialize_data(const char **p_xpm) {
 				size_height = line_str.get_slicec(' ', 1).to_int();
 				colormap_size = line_str.get_slicec(' ', 2).to_int();
 				pixelchars = line_str.get_slicec(' ', 3).to_int();
-				ERR_FAIL_COND(colormap_size > 32766);
-				ERR_FAIL_COND(pixelchars > 5);
-				ERR_FAIL_COND(size_width > 32767);
-				ERR_FAIL_COND(size_height > 32767);
+				ERR_FAIL_COND(colormap_size <= 0 || colormap_size > 32766);
+				ERR_FAIL_COND(pixelchars <= 0 || pixelchars > 5);
+				ERR_FAIL_COND(size_width <= 0 || size_width > 32767);
+				ERR_FAIL_COND(size_height <= 0 || size_height > 32767);
+				ERR_FAIL_COND(int64_t(size_width) * size_height > MAX_PIXELS);
 				status = READING_COLORS;
 			} break;
 			case READING_COLORS: {
+				ERR_FAIL_COND(strlen(line_ptr) < (size_t)pixelchars);
 				String colorstring;
 				for (int i = 0; i < pixelchars; i++) {
 					colorstring += *line_ptr;
@@ -2354,17 +2358,18 @@ void Image::initialize_data(const char **p_xpm) {
 				if (line == colormap_size) {
 					status = READING_PIXELS;
 					initialize_data(size_width, size_height, false, has_alpha ? FORMAT_RGBA8 : FORMAT_RGB8);
+					ERR_FAIL_COND(data.is_empty());
 					data_write = data.ptrw();
 					pixel_size = has_alpha ? 4 : 3;
 				}
 			} break;
 			case READING_PIXELS: {
+				ERR_FAIL_COND(pixelchars <= 0 || pixelchars > 5);
+				ERR_FAIL_COND(strlen(line_ptr) < (size_t)size_width * pixelchars);
 				int y = line - colormap_size - 1;
 				for (int x = 0; x < size_width; x++) {
 					char pixelstr[6] = { 0, 0, 0, 0, 0, 0 };
-					for (int i = 0; i < pixelchars; i++) {
-						pixelstr[i] = line_ptr[x * pixelchars + i];
-					}
+					memcpy(pixelstr, &line_ptr[x * pixelchars], pixelchars);
 
 					Color *colorptr = colormap.getptr(pixelstr);
 					ERR_FAIL_NULL(colorptr);

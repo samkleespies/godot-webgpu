@@ -31,6 +31,8 @@ const emscriptenGlobals = {
 	'autoAddDeps': true,
 	'addToLibrary': true,
 	'addOnPostRun': true,
+	'addRunDependency': true,
+	'removeRunDependency': true,
 	'getValue': true,
 	'lengthBytesUTF8': true,
 	'mergeInto': true,
@@ -43,10 +45,11 @@ const emscriptenGlobals = {
 };
 
 module.exports = [
-	pluginJs.configs.all,
-	stylistic.configs.customize({ jsx: false }),
+	{ ...pluginJs.configs.all, files: ['**/*.js'] },
+	{ ...stylistic.configs.customize({ jsx: false }), files: ['**/*.js'] },
 
 	{
+		files: ['**/*.js'],
 		rules: {
 			'consistent-this': ['error', 'me'], // enforce consistent naming when capturing the current execution context
 			'curly': ['error', 'all'], // enforce consistent brace style for all control statements
@@ -161,6 +164,27 @@ module.exports = [
 				'IDHandler': true,
 				'XRWebGLLayer': true,
 			},
+		},
+	},
+
+	// WebGPU bootstrap files run in Emscripten's browser runtime before GodotRuntime exists.
+	{
+		files: ['platform/web/js/pre_wgpu.js', 'platform/web/js/spirv_to_wgsl.js', 'platform/web/js/libs/library_godot_webgpu_prerun.js'],
+		languageOptions: {
+			globals: {
+				...globals.browser,
+				...emscriptenGlobals,
+				WebGPU: true,
+				GPUTextureUsage: false,
+				GPUBufferUsage: false,
+				GPUDevice: false,
+				_emscripten_webgpu_get_device: true,
+				emscripten_webgpu_get_device: true,
+			},
+		},
+		rules: {
+			'no-console': 'off', // Bootstrap diagnostics cannot use Godot's runtime logger yet.
+			'no-use-before-define': ['error', { functions: false }], // Function declarations are hoisted.
 		},
 	},
 

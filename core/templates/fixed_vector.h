@@ -107,12 +107,12 @@ public:
 	/// If p_size > size(), constructs new elements.
 	/// If p_size < size(), destructs new elements.
 	constexpr Error resize_initialized(uint32_t p_size) {
+		ERR_FAIL_COND_V(p_size > CAPACITY, ERR_OUT_OF_MEMORY);
 		if (p_size > _size) {
-			ERR_FAIL_COND_V(p_size > CAPACITY, ERR_OUT_OF_MEMORY);
 			memnew_arr_placement(ptr() + _size, p_size - _size);
 		} else if (p_size < _size) {
 			if constexpr (!std::is_trivially_destructible_v<T>) {
-				for (uint32_t i = p_size; i < _size; i++) {
+				for (uint32_t i = p_size; i < CAPACITY && i < _size; i++) {
 					ptr()[i].~T();
 				}
 			}

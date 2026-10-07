@@ -38,6 +38,28 @@
 
 namespace TestNode {
 
+TEST_CASE("[SceneTree][Node] Deferred unique group calls reuse argument storage") {
+	SceneTree *tree = SceneTree::get_singleton();
+	Vector<Node *> nodes;
+	const uint32_t flags = SceneTree::GROUP_CALL_DEFERRED | SceneTree::GROUP_CALL_UNIQUE;
+	for (int i = 0; i < 128; i++) {
+		Node *node = memnew(Node);
+		tree->get_root()->add_child(node);
+		nodes.push_back(node);
+		StringName group = "deferred_group_" + itos(i);
+		node->add_to_group(group);
+		tree->call_group_flags(flags, group, "set_meta", StringName("marker"), i);
+		tree->call_group_flags(flags, group, "set_meta", StringName("marker"), i + 1);
+		tree->call_group_flags(flags, group, "get_instance_id");
+	}
+
+	tree->process(0);
+	for (int i = 0; i < nodes.size(); i++) {
+		CHECK_EQ(int(nodes[i]->get_meta("marker")), i);
+		memdelete(nodes[i]);
+	}
+}
+
 class TestNode : public Node {
 	GDCLASS(TestNode, Node);
 

@@ -465,9 +465,7 @@ void Object::set_indexed(const Vector<StringName> &p_names, const Variant &p_val
 
 	for (int i = 1; i < p_names.size() - 1; i++) {
 		value_stack.push_back(value_stack.back()->get().get_named(p_names[i], valid));
-		if (r_valid) {
-			*r_valid = valid;
-		}
+		*r_valid = valid;
 
 		if (!valid) {
 			value_stack.clear();
@@ -481,9 +479,7 @@ void Object::set_indexed(const Vector<StringName> &p_names, const Variant &p_val
 		value_stack.back()->prev()->get().set_named(p_names[i], value_stack.back()->get(), valid);
 		value_stack.pop_back();
 
-		if (r_valid) {
-			*r_valid = valid;
-		}
+		*r_valid = valid;
 		if (!valid) {
 			value_stack.clear();
 			return;

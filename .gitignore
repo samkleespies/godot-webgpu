@@ -397,3 +397,6 @@ $RECYCLE.BIN/
 *.msp
 *.lnk
 *.generated.props
+
+# Godot editor metadata is not an Android resource.
+/platform/android/java/**/*.import

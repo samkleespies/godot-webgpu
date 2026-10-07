@@ -1,3 +1,6 @@
+permissions:
+  contents: read
+
 name: 🐧 Linux Builds
 on:
   workflow_call:
@@ -109,7 +112,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          # Only the top-level Dawn port and emsdk sources are used.
+          # Dawn's nested conformance tests include private Google repositories.
+          submodules: true
 
       - name: Linux dependencies for tests
         if: matrix.proj-test
@@ -196,8 +201,12 @@ jobs:
 
       - name: Generate C# glue
         if: matrix.build-mono
+        # This fork contains a game project; glue generation must run outside it.
+        working-directory: ${{ runner.temp }}
         run: |
-          ${{ matrix.bin }} --headless --generate-mono-glue ./modules/mono/glue
+          "${{ github.workspace }}/${{ matrix.bin }}" --headless --generate-mono-glue "${{ github.workspace }}/modules/mono/glue"
+          test -f "${{ github.workspace }}/modules/mono/glue/GodotSharp/GodotSharp/Generated/GeneratedIncludes.props"
+          test -f "${{ github.workspace }}/modules/mono/glue/GodotSharp/GodotSharpEditor/Generated/GeneratedIncludes.props"
 
       - name: Build .NET solutions
         if: matrix.build-mono
@@ -245,6 +254,7 @@ jobs:
 
       # Download and run the test project
       - name: Test Godot project
+        timeout-minutes: 20
         uses: ./.github/actions/godot-project-test
         if: matrix.proj-test
         with:

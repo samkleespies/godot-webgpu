@@ -52,36 +52,43 @@ Error ImageLoaderHDR::load_image(Ref<Image> p_image, Ref<FileAccess> f, BitField
 
 	ERR_FAIL_COND_V(token != "-Y", ERR_FILE_CORRUPT);
 
-	int height = f->get_token().to_int();
+	int64_t height_value = f->get_token().to_int();
 
 	token = f->get_token();
 
 	ERR_FAIL_COND_V(token != "+X", ERR_FILE_CORRUPT);
 
-	int width = f->get_line().to_int();
+	int64_t width_value = f->get_line().to_int();
+	ERR_FAIL_COND_V(width_value <= 0 || width_value > Image::MAX_WIDTH, ERR_FILE_CORRUPT);
+	ERR_FAIL_COND_V(height_value <= 0 || height_value > Image::MAX_HEIGHT, ERR_FILE_CORRUPT);
+	ERR_FAIL_COND_V(width_value * height_value > Image::MAX_PIXELS, ERR_FILE_CORRUPT);
+	int width = width_value;
+	int height = height_value;
+	uint64_t data_size = width_value * height_value * sizeof(uint32_t);
 
 	Vector<uint8_t> imgdata;
 
-	imgdata.resize(height * width * (int)sizeof(uint32_t));
+	Error allocation_error = imgdata.resize(data_size);
+	ERR_FAIL_COND_V(allocation_error != OK, allocation_error);
 
 	{
 		uint8_t *ptr = imgdata.ptrw();
 
-		Vector<uint8_t> temp_read_data;
-		temp_read_data.resize(128);
-		uint8_t *temp_read_ptr = temp_read_data.ptrw();
+		uint8_t temp_read_data[128];
 
 		if (width < 8 || width >= 32768) {
 			// Read flat data
 
-			f->get_buffer(ptr, (uint64_t)width * height * 4);
+			ERR_FAIL_COND_V(f->get_buffer(ptr, data_size) != data_size, ERR_FILE_CORRUPT);
 		} else {
 			// Read RLE-encoded data
 
 			for (int j = 0; j < height; ++j) {
-				int c1 = f->get_8();
-				int c2 = f->get_8();
-				int len = f->get_8();
+				uint8_t scanline_header[4];
+				ERR_FAIL_COND_V(f->get_buffer(scanline_header, 4) != 4, ERR_FILE_CORRUPT);
+				int c1 = scanline_header[0];
+				int c2 = scanline_header[1];
+				int len = scanline_header[2];
 				if (c1 != 2 || c2 != 2 || (len & 0x80)) {
 					// not run-length encoded, so we have to actually use THIS data as a decoded
 					// pixel (note this can't be a valid pixel--one of RGB must be >= 128)
@@ -89,32 +96,36 @@ Error ImageLoaderHDR::load_image(Ref<Image> p_image, Ref<FileAccess> f, BitField
 					ptr[(j * width) * 4 + 0] = uint8_t(c1);
 					ptr[(j * width) * 4 + 1] = uint8_t(c2);
 					ptr[(j * width) * 4 + 2] = uint8_t(len);
-					ptr[(j * width) * 4 + 3] = f->get_8();
+					ptr[(j * width) * 4 + 3] = scanline_header[3];
 
-					f->get_buffer(&ptr[(j * width + 1) * 4], (width - 1) * 4);
+					uint64_t remaining_size = (width - 1) * 4;
+					ERR_FAIL_COND_V(f->get_buffer(&ptr[(j * width + 1) * 4], remaining_size) != remaining_size, ERR_FILE_CORRUPT);
 					continue;
 				}
 				len <<= 8;
-				len |= f->get_8();
+				len |= scanline_header[3];
 
 				ERR_FAIL_COND_V_MSG(len != width, ERR_FILE_CORRUPT, "Invalid decoded scanline length, corrupt HDR.");
 
 				for (int k = 0; k < 4; ++k) {
 					int i = 0;
 					while (i < width) {
-						int count = f->get_8();
-						if (count > 128) {
+						uint8_t packet;
+						ERR_FAIL_COND_V(f->get_buffer(&packet, 1) != 1, ERR_FILE_CORRUPT);
+						int count = packet > 128 ? packet - 128 : packet;
+						ERR_FAIL_COND_V(count == 0 || count > width - i, ERR_FILE_CORRUPT);
+						if (packet > 128) {
 							// Run
-							int value = f->get_8();
-							count -= 128;
+							uint8_t value;
+							ERR_FAIL_COND_V(f->get_buffer(&value, 1) != 1, ERR_FILE_CORRUPT);
 							for (int z = 0; z < count; ++z) {
 								ptr[(j * width + i++) * 4 + k] = uint8_t(value);
 							}
 						} else {
 							// Dump
-							f->get_buffer(temp_read_ptr, count);
+							ERR_FAIL_COND_V(f->get_buffer(temp_read_data, count) != (uint64_t)count, ERR_FILE_CORRUPT);
 							for (int z = 0; z < count; ++z) {
-								ptr[(j * width + i++) * 4 + k] = temp_read_ptr[z];
+								ptr[(j * width + i++) * 4 + k] = temp_read_data[z];
 							}
 						}
 					}
