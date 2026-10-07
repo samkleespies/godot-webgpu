@@ -3921,10 +3921,23 @@ RDD::UniformSetID RenderingDeviceDriverVulkan::uniform_set_create(VectorView<Bou
 	}
 	DescriptorSetPoolKey pool_key;
 	// Immutable samplers will be skipped so we need to track the number of vk_writes used.
-	VkWriteDescriptorSet *vk_writes = ALLOCA_ARRAY(VkWriteDescriptorSet, p_uniforms.size());
+	LocalVector<VkWriteDescriptorSet> writes_storage;
+	writes_storage.resize(p_uniforms.size());
+	VkWriteDescriptorSet *vk_writes = writes_storage.ptr();
+	// Descriptor pointers must remain valid until vkUpdateDescriptorSets below.
+	// Keep each binding's payload on the heap instead of accumulating alloca
+	// allocations for every binding on the calling thread's stack.
+	struct UniformStorage {
+		LocalVector<VkDescriptorImageInfo> images;
+		LocalVector<VkDescriptorBufferInfo> buffers;
+		LocalVector<VkBufferView> views;
+	};
+	LocalVector<UniformStorage> uniform_storage;
+	uniform_storage.resize(p_uniforms.size());
 	uint32_t writes_amount = 0;
 	for (uint32_t i = 0; i < p_uniforms.size(); i++) {
 		const BoundUniform &uniform = p_uniforms[i];
+		UniformStorage &storage = uniform_storage[i];
 
 		vk_writes[writes_amount] = {};
 		vk_writes[writes_amount].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -3937,7 +3950,8 @@ RDD::UniformSetID RenderingDeviceDriverVulkan::uniform_set_create(VectorView<Bou
 					continue; // Skipping immutable samplers.
 				}
 				num_descriptors = uniform.ids.size();
-				VkDescriptorImageInfo *vk_img_infos = ALLOCA_ARRAY(VkDescriptorImageInfo, num_descriptors);
+				storage.images.resize(num_descriptors);
+				VkDescriptorImageInfo *vk_img_infos = storage.images.ptr();
 
 				for (uint32_t j = 0; j < num_descriptors; j++) {
 					vk_img_infos[j] = {};
@@ -3951,7 +3965,8 @@ RDD::UniformSetID RenderingDeviceDriverVulkan::uniform_set_create(VectorView<Bou
 			} break;
 			case UNIFORM_TYPE_SAMPLER_WITH_TEXTURE: {
 				num_descriptors = uniform.ids.size() / 2;
-				VkDescriptorImageInfo *vk_img_infos = ALLOCA_ARRAY(VkDescriptorImageInfo, num_descriptors);
+				storage.images.resize(num_descriptors);
+				VkDescriptorImageInfo *vk_img_infos = storage.images.ptr();
 
 				for (uint32_t j = 0; j < num_descriptors; j++) {
 #ifdef DEBUG_ENABLED
@@ -3970,7 +3985,8 @@ RDD::UniformSetID RenderingDeviceDriverVulkan::uniform_set_create(VectorView<Bou
 			} break;
 			case UNIFORM_TYPE_TEXTURE: {
 				num_descriptors = uniform.ids.size();
-				VkDescriptorImageInfo *vk_img_infos = ALLOCA_ARRAY(VkDescriptorImageInfo, num_descriptors);
+				storage.images.resize(num_descriptors);
+				VkDescriptorImageInfo *vk_img_infos = storage.images.ptr();
 
 				for (uint32_t j = 0; j < num_descriptors; j++) {
 #ifdef DEBUG_ENABLED
@@ -3988,7 +4004,8 @@ RDD::UniformSetID RenderingDeviceDriverVulkan::uniform_set_create(VectorView<Bou
 			} break;
 			case UNIFORM_TYPE_IMAGE: {
 				num_descriptors = uniform.ids.size();
-				VkDescriptorImageInfo *vk_img_infos = ALLOCA_ARRAY(VkDescriptorImageInfo, num_descriptors);
+				storage.images.resize(num_descriptors);
+				VkDescriptorImageInfo *vk_img_infos = storage.images.ptr();
 
 				for (uint32_t j = 0; j < num_descriptors; j++) {
 #ifdef DEBUG_ENABLED
@@ -4006,8 +4023,10 @@ RDD::UniformSetID RenderingDeviceDriverVulkan::uniform_set_create(VectorView<Bou
 			} break;
 			case UNIFORM_TYPE_TEXTURE_BUFFER: {
 				num_descriptors = uniform.ids.size();
-				VkDescriptorBufferInfo *vk_buf_infos = ALLOCA_ARRAY(VkDescriptorBufferInfo, num_descriptors);
-				VkBufferView *vk_buf_views = ALLOCA_ARRAY(VkBufferView, num_descriptors);
+				storage.buffers.resize(num_descriptors);
+				VkDescriptorBufferInfo *vk_buf_infos = storage.buffers.ptr();
+				storage.views.resize(num_descriptors);
+				VkBufferView *vk_buf_views = storage.views.ptr();
 
 				for (uint32_t j = 0; j < num_descriptors; j++) {
 					const BufferInfo *buf_info = (const BufferInfo *)uniform.ids[j].id;
@@ -4024,9 +4043,12 @@ RDD::UniformSetID RenderingDeviceDriverVulkan::uniform_set_create(VectorView<Bou
 			} break;
 			case UNIFORM_TYPE_SAMPLER_WITH_TEXTURE_BUFFER: {
 				num_descriptors = uniform.ids.size() / 2;
-				VkDescriptorImageInfo *vk_img_infos = ALLOCA_ARRAY(VkDescriptorImageInfo, num_descriptors);
-				VkDescriptorBufferInfo *vk_buf_infos = ALLOCA_ARRAY(VkDescriptorBufferInfo, num_descriptors);
-				VkBufferView *vk_buf_views = ALLOCA_ARRAY(VkBufferView, num_descriptors);
+				storage.images.resize(num_descriptors);
+				VkDescriptorImageInfo *vk_img_infos = storage.images.ptr();
+				storage.buffers.resize(num_descriptors);
+				VkDescriptorBufferInfo *vk_buf_infos = storage.buffers.ptr();
+				storage.views.resize(num_descriptors);
+				VkBufferView *vk_buf_views = storage.views.ptr();
 
 				for (uint32_t j = 0; j < num_descriptors; j++) {
 					vk_img_infos[j] = {};
@@ -4050,7 +4072,8 @@ RDD::UniformSetID RenderingDeviceDriverVulkan::uniform_set_create(VectorView<Bou
 			} break;
 			case UNIFORM_TYPE_UNIFORM_BUFFER: {
 				const BufferInfo *buf_info = (const BufferInfo *)uniform.ids[0].id;
-				VkDescriptorBufferInfo *vk_buf_info = ALLOCA_SINGLE(VkDescriptorBufferInfo);
+				storage.buffers.resize(1);
+				VkDescriptorBufferInfo *vk_buf_info = storage.buffers.ptr();
 				*vk_buf_info = {};
 				vk_buf_info->buffer = buf_info->vk_buffer;
 				vk_buf_info->range = buf_info->size;
@@ -4060,7 +4083,8 @@ RDD::UniformSetID RenderingDeviceDriverVulkan::uniform_set_create(VectorView<Bou
 			} break;
 			case UNIFORM_TYPE_STORAGE_BUFFER: {
 				const BufferInfo *buf_info = (const BufferInfo *)uniform.ids[0].id;
-				VkDescriptorBufferInfo *vk_buf_info = ALLOCA_SINGLE(VkDescriptorBufferInfo);
+				storage.buffers.resize(1);
+				VkDescriptorBufferInfo *vk_buf_info = storage.buffers.ptr();
 				*vk_buf_info = {};
 				vk_buf_info->buffer = buf_info->vk_buffer;
 				vk_buf_info->range = buf_info->size;
@@ -4070,7 +4094,8 @@ RDD::UniformSetID RenderingDeviceDriverVulkan::uniform_set_create(VectorView<Bou
 			} break;
 			case UNIFORM_TYPE_INPUT_ATTACHMENT: {
 				num_descriptors = uniform.ids.size();
-				VkDescriptorImageInfo *vk_img_infos = ALLOCA_ARRAY(VkDescriptorImageInfo, num_descriptors);
+				storage.images.resize(num_descriptors);
+				VkDescriptorImageInfo *vk_img_infos = storage.images.ptr();
 
 				for (uint32_t j = 0; j < uniform.ids.size(); j++) {
 					vk_img_infos[j] = {};
@@ -4508,26 +4533,42 @@ RDD::RenderPassID RenderingDeviceDriverVulkan::render_pass_create(VectorView<Att
 		vk_attachments[i].finalLayout = RD_TO_VK_LAYOUT[p_attachments[i].final_layout];
 	}
 
-	VkSubpassDescription2KHR *vk_subpasses = ALLOCA_ARRAY(VkSubpassDescription2KHR, p_subpasses.size());
+	LocalVector<VkSubpassDescription2KHR> subpasses_storage;
+	subpasses_storage.resize(p_subpasses.size());
+	VkSubpassDescription2KHR *vk_subpasses = subpasses_storage.ptr();
+	struct SubpassStorage {
+		LocalVector<VkAttachmentReference2KHR> input;
+		LocalVector<VkAttachmentReference2KHR> color;
+		LocalVector<VkAttachmentReference2KHR> resolve;
+		VkAttachmentReference2KHR depth_stencil;
+		VkAttachmentReference2KHR shading_rate;
+		VkFragmentShadingRateAttachmentInfoKHR shading_rate_info;
+	};
+	// Pre-size the outer vector so pointers in vk_subpasses never move.
+	LocalVector<SubpassStorage> subpass_storage;
+	subpass_storage.resize(p_subpasses.size());
 	for (uint32_t i = 0; i < p_subpasses.size(); i++) {
-		VkAttachmentReference2KHR *vk_subpass_input_attachments = ALLOCA_ARRAY(VkAttachmentReference2KHR, p_subpasses[i].input_references.size());
+		subpass_storage[i].input.resize(p_subpasses[i].input_references.size());
+		VkAttachmentReference2KHR *vk_subpass_input_attachments = subpass_storage[i].input.ptr();
 		for (uint32_t j = 0; j < p_subpasses[i].input_references.size(); j++) {
 			_attachment_reference_to_vk(p_subpasses[i].input_references[j], &vk_subpass_input_attachments[j]);
 		}
 
-		VkAttachmentReference2KHR *vk_subpass_color_attachments = ALLOCA_ARRAY(VkAttachmentReference2KHR, p_subpasses[i].color_references.size());
+		subpass_storage[i].color.resize(p_subpasses[i].color_references.size());
+		VkAttachmentReference2KHR *vk_subpass_color_attachments = subpass_storage[i].color.ptr();
 		for (uint32_t j = 0; j < p_subpasses[i].color_references.size(); j++) {
 			_attachment_reference_to_vk(p_subpasses[i].color_references[j], &vk_subpass_color_attachments[j]);
 		}
 
-		VkAttachmentReference2KHR *vk_subpass_resolve_attachments = ALLOCA_ARRAY(VkAttachmentReference2KHR, p_subpasses[i].resolve_references.size());
+		subpass_storage[i].resolve.resize(p_subpasses[i].resolve_references.size());
+		VkAttachmentReference2KHR *vk_subpass_resolve_attachments = subpass_storage[i].resolve.ptr();
 		for (uint32_t j = 0; j < p_subpasses[i].resolve_references.size(); j++) {
 			_attachment_reference_to_vk(p_subpasses[i].resolve_references[j], &vk_subpass_resolve_attachments[j]);
 		}
 
 		VkAttachmentReference2KHR *vk_subpass_depth_stencil_attachment = nullptr;
 		if (p_subpasses[i].depth_stencil_reference.attachment != AttachmentReference::UNUSED) {
-			vk_subpass_depth_stencil_attachment = ALLOCA_SINGLE(VkAttachmentReference2KHR);
+			vk_subpass_depth_stencil_attachment = &subpass_storage[i].depth_stencil;
 			_attachment_reference_to_vk(p_subpasses[i].depth_stencil_reference, vk_subpass_depth_stencil_attachment);
 		}
 
@@ -4546,13 +4587,13 @@ RDD::RenderPassID RenderingDeviceDriverVulkan::render_pass_create(VectorView<Att
 
 		// Fragment shading rate.
 		if (fsr_capabilities.attachment_supported && p_subpasses[i].fragment_shading_rate_reference.attachment != AttachmentReference::UNUSED) {
-			VkAttachmentReference2KHR *vk_subpass_fsr_attachment = ALLOCA_SINGLE(VkAttachmentReference2KHR);
+			VkAttachmentReference2KHR *vk_subpass_fsr_attachment = &subpass_storage[i].shading_rate;
 			*vk_subpass_fsr_attachment = {};
 			vk_subpass_fsr_attachment->sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2_KHR;
 			vk_subpass_fsr_attachment->attachment = p_subpasses[i].fragment_shading_rate_reference.attachment;
 			vk_subpass_fsr_attachment->layout = VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR;
 
-			VkFragmentShadingRateAttachmentInfoKHR *vk_fsr_info = ALLOCA_SINGLE(VkFragmentShadingRateAttachmentInfoKHR);
+			VkFragmentShadingRateAttachmentInfoKHR *vk_fsr_info = &subpass_storage[i].shading_rate_info;
 			*vk_fsr_info = {};
 			vk_fsr_info->sType = VK_STRUCTURE_TYPE_FRAGMENT_SHADING_RATE_ATTACHMENT_INFO_KHR;
 			vk_fsr_info->pFragmentShadingRateAttachment = vk_subpass_fsr_attachment;
@@ -5140,26 +5181,24 @@ RDD::PipelineID RenderingDeviceDriverVulkan::render_pipeline_create(
 			"Cannot create pipeline without shader module, please make sure shader modules are destroyed only after all associated pipelines are created.");
 	VkPipelineShaderStageCreateInfo *vk_pipeline_stages = ALLOCA_ARRAY(VkPipelineShaderStageCreateInfo, shader_info->vk_stages_create_info.size());
 
+	LocalVector<VkSpecializationMapEntry> specialization_map_entries;
+	VkSpecializationInfo specialization_info = {};
+	if (p_specialization_constants.size()) {
+		specialization_map_entries.resize(p_specialization_constants.size());
+		for (uint32_t j = 0; j < p_specialization_constants.size(); j++) {
+			specialization_map_entries[j].constantID = p_specialization_constants[j].constant_id;
+			specialization_map_entries[j].offset = (const char *)&p_specialization_constants[j].int_value - (const char *)p_specialization_constants.ptr();
+			specialization_map_entries[j].size = sizeof(uint32_t);
+		}
+		specialization_info.dataSize = p_specialization_constants.size() * sizeof(PipelineSpecializationConstant);
+		specialization_info.pData = p_specialization_constants.ptr();
+		specialization_info.mapEntryCount = p_specialization_constants.size();
+		specialization_info.pMapEntries = specialization_map_entries.ptr();
+	}
 	for (uint32_t i = 0; i < shader_info->vk_stages_create_info.size(); i++) {
 		vk_pipeline_stages[i] = shader_info->vk_stages_create_info[i];
-
 		if (p_specialization_constants.size()) {
-			VkSpecializationMapEntry *specialization_map_entries = ALLOCA_ARRAY(VkSpecializationMapEntry, p_specialization_constants.size());
-			for (uint32_t j = 0; j < p_specialization_constants.size(); j++) {
-				specialization_map_entries[j] = {};
-				specialization_map_entries[j].constantID = p_specialization_constants[j].constant_id;
-				specialization_map_entries[j].offset = (const char *)&p_specialization_constants[j].int_value - (const char *)p_specialization_constants.ptr();
-				specialization_map_entries[j].size = sizeof(uint32_t);
-			}
-
-			VkSpecializationInfo *specialization_info = ALLOCA_SINGLE(VkSpecializationInfo);
-			*specialization_info = {};
-			specialization_info->dataSize = p_specialization_constants.size() * sizeof(PipelineSpecializationConstant);
-			specialization_info->pData = p_specialization_constants.ptr();
-			specialization_info->mapEntryCount = p_specialization_constants.size();
-			specialization_info->pMapEntries = specialization_map_entries;
-
-			vk_pipeline_stages[i].pSpecializationInfo = specialization_info;
+			vk_pipeline_stages[i].pSpecializationInfo = &specialization_info;
 		}
 	}
 
