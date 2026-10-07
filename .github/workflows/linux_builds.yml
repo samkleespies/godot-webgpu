@@ -254,6 +254,7 @@ jobs:
 
       # Download and run the test project
       - name: Test Godot project
+        timeout-minutes: 20
         uses: ./.github/actions/godot-project-test
         if: matrix.proj-test
         with:

@@ -1,0 +1,80 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [webgpu-prototype]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '19 4 * * 2'
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: actions
+            build-mode: none
+          - language: c-cpp
+            build-mode: none
+          - language: csharp
+            build-mode: none
+          - language: java-kotlin
+            build-mode: manual
+          - language: javascript-typescript
+            build-mode: none
+          - language: python
+            build-mode: none
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Java 17
+        if: matrix.language == 'java-kotlin'
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Android build configuration dependencies
+        if: matrix.language == 'java-kotlin'
+        uses: ./.github/actions/godot-deps
+
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+
+      # The Gradle root is nested, so automatic build detection misses it.
+      # Compile both Java and Kotlin, including every Android product flavor.
+      - name: Compile Android sources for analysis
+        if: matrix.language == 'java-kotlin'
+        working-directory: platform/android/java
+        run: |
+          tasks=()
+          for variant in TemplateDebug EditorDebug; do
+            tasks+=(":lib:compile${variant}Kotlin" ":lib:compile${variant}JavaWithJavac")
+          done
+          for variant in StandardDebug MonoDebug; do
+            tasks+=(":app:compile${variant}Kotlin" ":app:compile${variant}JavaWithJavac")
+          done
+          for variant in AndroidDebug HorizonosDebug PicoosDebug; do
+            tasks+=(":editor:compile${variant}Kotlin" ":editor:compile${variant}JavaWithJavac")
+          done
+          ./gradlew --no-daemon --no-build-cache --rerun-tasks -Pkotlin.compiler.execution.strategy=in-process "${tasks[@]}"
+
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:${{ matrix.language }}
+          # The full C++ scan previously finished, then timed out bundling its
+          # optional database archive. SARIF findings are still uploaded.
+          upload-database: false

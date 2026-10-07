@@ -5851,8 +5851,11 @@ Vector<uint8_t> String::to_ascii_buffer() const {
 	CharString charstr = s->ascii();
 
 	Vector<uint8_t> retval;
-	size_t len = charstr.length();
-	retval.resize_uninitialized(len);
+	int character_count = charstr.length();
+	ERR_FAIL_COND_V(character_count <= 0, Vector<uint8_t>());
+	size_t len = size_t(character_count) * sizeof(char);
+	Error err = retval.resize_uninitialized(len);
+	ERR_FAIL_COND_V(err != OK, Vector<uint8_t>());
 	uint8_t *w = retval.ptrw();
 	memcpy(w, charstr.ptr(), len);
 
@@ -5867,8 +5870,11 @@ Vector<uint8_t> String::to_utf8_buffer() const {
 	CharString charstr = s->utf8();
 
 	Vector<uint8_t> retval;
-	size_t len = charstr.length();
-	retval.resize_uninitialized(len);
+	int character_count = charstr.length();
+	ERR_FAIL_COND_V(character_count <= 0, Vector<uint8_t>());
+	size_t len = size_t(character_count) * sizeof(char);
+	Error err = retval.resize_uninitialized(len);
+	ERR_FAIL_COND_V(err != OK, Vector<uint8_t>());
 	uint8_t *w = retval.ptrw();
 	memcpy(w, charstr.ptr(), len);
 
@@ -5883,8 +5889,11 @@ Vector<uint8_t> String::to_utf16_buffer() const {
 	Char16String charstr = s->utf16();
 
 	Vector<uint8_t> retval;
-	size_t len = charstr.length() * sizeof(char16_t);
-	retval.resize_uninitialized(len);
+	int character_count = charstr.length();
+	ERR_FAIL_COND_V(character_count <= 0, Vector<uint8_t>());
+	size_t len = size_t(character_count) * sizeof(char16_t);
+	Error err = retval.resize_uninitialized(len);
+	ERR_FAIL_COND_V(err != OK, Vector<uint8_t>());
 	uint8_t *w = retval.ptrw();
 	memcpy(w, (const void *)charstr.ptr(), len);
 

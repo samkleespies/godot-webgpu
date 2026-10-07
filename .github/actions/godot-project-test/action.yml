@@ -22,7 +22,6 @@ runs:
     # Editor is quite complicated piece of software, so it is easy to introduce bug here.
 
     - name: Open and close editor (Vulkan)
-      timeout-minutes: 10
       shell: bash
       run: |
         set -o pipefail
@@ -32,7 +31,6 @@ runs:
         misc/scripts/check_ci_log.py sanitizers_log.txt
 
     - name: Open and close editor (GLES3)
-      timeout-minutes: 10
       shell: bash
       run: |
         set -o pipefail
@@ -43,7 +41,6 @@ runs:
 
     # Run test project
     - name: Run project
-      timeout-minutes: 10
       shell: bash
       run: |
         set -o pipefail
