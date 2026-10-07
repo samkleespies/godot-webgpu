@@ -46,6 +46,10 @@ Error jpeg_turbo_load_image_from_buffer(Image *p_image, const uint8_t *p_buffer,
 	const unsigned int width = tj3Get(tj_instance, TJPARAM_JPEGWIDTH);
 	const unsigned int height = tj3Get(tj_instance, TJPARAM_JPEGHEIGHT);
 	const TJCS colorspace = (TJCS)tj3Get(tj_instance, TJPARAM_COLORSPACE);
+	if (width == 0 || height == 0 || width > Image::MAX_WIDTH || height > Image::MAX_HEIGHT || uint64_t(width) * height > Image::MAX_PIXELS) {
+		tj3Destroy(tj_instance);
+		return ERR_FILE_CORRUPT;
+	}
 
 	if (tj3Get(tj_instance, TJPARAM_PRECISION) > 8) {
 		// Proceed anyway and convert to rgb8?
@@ -65,7 +69,11 @@ Error jpeg_turbo_load_image_from_buffer(Image *p_image, const uint8_t *p_buffer,
 	}
 
 	Vector<uint8_t> data;
-	data.resize(width * height * tjPixelSize[tj_pixel_format]);
+	Error allocation_error = data.resize(uint64_t(width) * height * tjPixelSize[tj_pixel_format]);
+	if (allocation_error != OK) {
+		tj3Destroy(tj_instance);
+		return allocation_error;
+	}
 
 	if (tj3Decompress8(tj_instance, p_buffer, p_buffer_len, data.ptrw(), 0, tj_pixel_format) < 0) {
 		tj3Destroy(tj_instance);
@@ -80,12 +88,13 @@ Error jpeg_turbo_load_image_from_buffer(Image *p_image, const uint8_t *p_buffer,
 Error ImageLoaderLibJPEGTurbo::load_image(Ref<Image> p_image, Ref<FileAccess> f, BitField<ImageFormatLoader::LoaderFlags> p_flags, float p_scale) {
 	Vector<uint8_t> src_image;
 	uint64_t src_image_len = f->get_length();
-	ERR_FAIL_COND_V(src_image_len == 0, ERR_FILE_CORRUPT);
-	src_image.resize(src_image_len);
+	ERR_FAIL_COND_V(src_image_len == 0 || src_image_len > INT_MAX, ERR_FILE_CORRUPT);
+	Error allocation_error = src_image.resize(src_image_len);
+	ERR_FAIL_COND_V(allocation_error != OK, allocation_error);
 
 	uint8_t *w = src_image.ptrw();
 
-	f->get_buffer(&w[0], src_image_len);
+	ERR_FAIL_COND_V(f->get_buffer(w, src_image_len) != src_image_len, ERR_FILE_CORRUPT);
 
 	Error err = jpeg_turbo_load_image_from_buffer(p_image.ptr(), w, src_image_len);
 
