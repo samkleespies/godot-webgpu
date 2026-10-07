@@ -4894,7 +4894,7 @@ void RenderingDevice::draw_list_set_blend_constants(DrawListID p_list, const Col
 }
 
 void RenderingDevice::draw_list_bind_render_pipeline(DrawListID p_list, RID p_render_pipeline) {
-	print_error("🚨🚨🚨 VALIDATION #5: draw_list_bind_render_pipeline() CALLED - pipeline RID: " + itos(p_render_pipeline.get_id()));
+	print_verbose("RenderingDevice: draw_list_bind_render_pipeline() CALLED - pipeline RID: " + itos(p_render_pipeline.get_id()));
 
 	ERR_RENDER_THREAD_GUARD();
 
@@ -4902,19 +4902,18 @@ void RenderingDevice::draw_list_bind_render_pipeline(DrawListID p_list, RID p_re
 
 	const RenderPipeline *pipeline = render_pipeline_owner.get_or_null(p_render_pipeline);
 	if (!pipeline) {
-		print_error("🚨🚨🚨 VALIDATION #5: ERROR - Pipeline is NULL for RID: " + itos(p_render_pipeline.get_id()));
+		print_verbose("RenderingDevice: ERROR - Pipeline is NULL for RID: " + itos(p_render_pipeline.get_id()));
 		ERR_FAIL_NULL(pipeline);
 	}
 
-	print_error("🚨🚨🚨 VALIDATION #5: Pipeline found, driver_id: " + itos((uint64_t)pipeline->driver_id.id));
+	print_verbose("RenderingDevice: Pipeline found, driver_id: " + itos((uint64_t)pipeline->driver_id.id));
 
 #ifdef DEBUG_ENABLED
 	ERR_FAIL_COND(pipeline->validation.framebuffer_format != draw_list_framebuffer_format && pipeline->validation.render_pass != draw_list_current_subpass);
 #endif
 
 	if (p_render_pipeline == draw_list.state.pipeline) {
-		printf("🚨🚨🚨 VALIDATION #5: Pipeline already bound, returning\n");
-		print_error("🚨🚨🚨 VALIDATION #5: Pipeline already bound, returning");
+		print_verbose("RenderingDevice: Pipeline already bound, returning");
 		return; // Redundant state, return.
 	}
 
@@ -4980,8 +4979,7 @@ void RenderingDevice::draw_list_bind_render_pipeline(DrawListID p_list, RID p_re
 
 #ifdef DEBUG_ENABLED
 	// Update render pass pipeline info.
-	printf("🚨🚨🚨 VALIDATION #5: Setting pipeline_active = true\n");
-	print_error("🚨🚨🚨 VALIDATION #5: Setting pipeline_active = true");
+	print_verbose("RenderingDevice: Setting pipeline_active = true");
 	draw_list.validation.pipeline_active = true;
 	draw_list.validation.pipeline_dynamic_state = pipeline->validation.dynamic_state;
 	draw_list.validation.pipeline_vertex_format = pipeline->validation.vertex_format;
@@ -5119,8 +5117,7 @@ void RenderingDevice::draw_list_draw(DrawListID p_list, bool p_use_indices, uint
 
 #ifdef DEBUG_ENABLED
 	if (!draw_list.validation.pipeline_active) {
-		printf("🚨🚨🚨 VALIDATION #5: ERROR - No render pipeline was set before attempting to draw!\n");
-		print_error("🚨🚨🚨 VALIDATION #5: ERROR - No render pipeline was set before attempting to draw!");
+		print_verbose("RenderingDevice: ERROR - No render pipeline was set before attempting to draw!");
 	}
 	ERR_FAIL_COND_MSG(!draw_list.validation.pipeline_active,
 			"No render pipeline was set before attempting to draw.");
