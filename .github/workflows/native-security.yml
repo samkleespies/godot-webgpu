@@ -29,3 +29,5 @@ jobs:
           /tmp/test-vhacd
           clang++ -std=c++17 -fsanitize=address,undefined -g -DU_STATIC_IMPLEMENTATION -DU_COMMON_IMPLEMENTATION -I thirdparty/icu4c/common tests/thirdparty/test_icu_map.cpp -o /tmp/test-icu-map
           /tmp/test-icu-map
+      - name: Check Vulkan temporary buffer lifetimes without a GPU
+        run: python3 tests/rendering/vulkan_transient_buffers.py
