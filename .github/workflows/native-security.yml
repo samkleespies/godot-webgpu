@@ -31,3 +31,6 @@ jobs:
           /tmp/test-icu-map
       - name: Check Vulkan temporary buffer lifetimes without a GPU
         run: python3 tests/rendering/vulkan_transient_buffers.py
+      - name: Check Linux camera frame bounds without camera hardware
+        if: runner.os == 'Linux'
+        run: python3 tests/rendering/camera_buffer_bounds.py
